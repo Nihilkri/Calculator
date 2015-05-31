@@ -23,12 +23,24 @@
 		/// the contents of this method with the code editor.
 		/// </summary>
 		private void InitializeComponent() {
-			this.components = new System.ComponentModel.Container();
+			this.SuspendLayout();
+			// 
+			// Form1
+			// 
+			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.Text = "Form1";
+			this.ClientSize = new System.Drawing.Size(624, 442);
+			this.Name = "Form1";
+			this.Text = "Compulator by Nihil K\'ri";
+			this.Load += new System.EventHandler(this.Form1_Load);
+			this.Click += new System.EventHandler(this.Form1_Click);
+			this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form1_KeyDown);
+			this.ResumeLayout(false);
+
 		}
 
 		#endregion
+
 	}
 }
 
