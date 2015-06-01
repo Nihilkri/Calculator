@@ -20,7 +20,7 @@ namespace Calculator {
 		#endregion Variables
 		public Form1() {InitializeComponent();	}
 		private void Form1_Load(object sender, EventArgs e) {
-			fx2 = (fx = Width) / 2; fy2 = (fy = Height) / 2;
+			fx2 = (fx = (Width - 16)) / 2; fy2 = (fy = (Height - 38)) / 2;
 			gi = new Bitmap(fx, fy);
 			gb = Graphics.FromImage(gi);
 			gf = CreateGraphics();
@@ -53,14 +53,48 @@ namespace Calculator {
 		}
 		public void Draw() {
 			gb.Clear(Color.Black);
-			gb.DrawString("Test:\n" + KN.Test(), Font, Brushes.White, 20, 20);
+			int b = 5, w = 120, lx = fx - w - 3 * b, ly = fy - w - 3 * b;
+			gb.FillRectangle(Brushes.DarkRed, b, b, lx, ly); // outp
+			gb.FillRectangle(Brushes.DarkGreen, lx + 2 * b, b, w, fy - 2 * b); // varp
+			gb.FillRectangle(Brushes.DarkBlue, b, ly + 2 * b, lx, w); // inp
 
+			//KNTest();
+			Text = fx + ", " + fy;
 
 
 			gf.DrawImage(gi, 0, 0);
 		}
 
 
+		public void KNTest() {
+			int a = 60128, b = 6128, c = 0;
+			i256 ia = a, ib = b, ic = c;
+			System.Numerics.BigInteger ba = a, bb = b, bc = c;
+			System.Numerics.Complex ca = a, cb = b, cc = c;
+			Complex ka = a, kb = b, kc = c;
+			DateTime st = DateTime.Now;
+			for(int q = 0 ; q < 1000000 ; q++) { c = a + b; }
+			gb.DrawString("int + int: " + (DateTime.Now - st).TotalMilliseconds + " ms", Font, Brushes.White, 0, 0);
+			st = DateTime.Now;
+			for(int q = 0 ; q < 1000000 ; q++) { ic = ia + ib; }
+			gb.DrawString("i256+i256: " + (DateTime.Now - st).TotalMilliseconds + " ms", Font, Brushes.White, 0, 12);
+			st = DateTime.Now;
+			for(int q = 0 ; q < 1000000 ; q++) { bc = ba + bb; }
+			gb.DrawString("BigI+BigI: " + (DateTime.Now - st).TotalMilliseconds + " ms", Font, Brushes.White, 0, 24);
+			st = DateTime.Now;
+			for(int q = 0 ; q < 1000000 ; q++) { cc = ca + cb; }
+			gb.DrawString("Sabi+Sabi: " + (DateTime.Now - st).TotalMilliseconds + " ms", Font, Brushes.White, 0, 36);
+			st = DateTime.Now;
+			for(int q = 0 ; q < 1000000 ; q++) { kc = ka + kb; }
+			gb.DrawString("Kabi+Kabi: " + (DateTime.Now - st).TotalMilliseconds + " ms", Font, Brushes.White, 0, 48);
 
+
+
+			//gb.DrawString(ia.ToString() + "\n" + ia.ToString(true), Font, Brushes.White, 20, 20);
+			//gb.DrawString(ib.ToString() + "\n" + ib.ToString(true), Font, Brushes.White, 300, 20);
+			//gb.DrawString(((int)(ia + ib+7000)).ToString() + "\n" + (ia + ib+7000).ToString() + "\n" + (ia + ib).ToString(true), Font, Brushes.White, 200, 230);
+
+
+		}
 	}
 }
