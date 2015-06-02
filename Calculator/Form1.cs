@@ -16,7 +16,7 @@ namespace Calculator {
 		static Graphics gb,gf; static Bitmap gi;
 		static int fx, fy, fx2, fy2;
 		#endregion Graphics
-		string inp = "", outp = "";
+		string inp = "", outp = "", varp = "";
 		#endregion Variables
 		public Form1() {InitializeComponent();	}
 		private void Form1_Load(object sender, EventArgs e) {
@@ -37,6 +37,8 @@ namespace Calculator {
 				case Keys.Escape: Close(); break;
 				case Keys.Enter: Calc(); break;
 
+				case Keys.D0: inp += "0"; Draw(); break;
+
 				default: break;
 			}
 
@@ -53,13 +55,19 @@ namespace Calculator {
 		}
 		public void Draw() {
 			gb.Clear(Color.Black);
-			int b = 5, w = 120, lx = fx - w - 3 * b, ly = fy - w - 3 * b;
-			gb.FillRectangle(Brushes.DarkRed, b, b, lx, ly); // outp
-			gb.FillRectangle(Brushes.DarkGreen, lx + 2 * b, b, w, fy - 2 * b); // varp
-			gb.FillRectangle(Brushes.DarkBlue, b, ly + 2 * b, lx, w); // inp
+			int b = 5, w = 60, lx = fx - w - 3 * b, ly = fy - w - 3 * b;
+			int ox = b, oy = b, ix = b, iy = ly + 2 * b, vx = lx + 2 * b, vy = b;
+			int ow = lx, oh = ly, iw = lx, ih = w, vw = w, vh = fy - 2 * b;
+			gb.FillRectangle(Brushes.DarkRed, ox, oy, ow, oh); // outp
+			gb.FillRectangle(Brushes.DarkGreen, vx, vy, vw, vh); // varp
+			gb.FillRectangle(Brushes.DarkBlue, ix, iy, iw, ih); // inp
 
 			//KNTest();
 			Text = fx + ", " + fy;
+
+			gb.DrawString(inp, Font, Brushes.White, ix, iy);
+			gb.DrawString(outp, Font, Brushes.White, ox, oy);
+			gb.DrawString(varp, Font, Brushes.White, vx, vy);
 
 
 			gf.DrawImage(gi, 0, 0);
