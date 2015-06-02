@@ -16,7 +16,7 @@ namespace Calculator {
 		static Graphics gb,gf; static Bitmap gi;
 		static int fx, fy, fx2, fy2;
 		#endregion Graphics
-		string inp = "", outp = "", varp = "", tym = "";
+		string inp = "", outp = "", varp = "", tym = ""; int inpp = 0;
 		#endregion Variables
 		public Form1() {InitializeComponent();	}
 		private void Form1_Load(object sender, EventArgs e) {
@@ -39,42 +39,42 @@ namespace Calculator {
 				case Keys.Enter: Parse(); break;
 				case Keys.Back: if(inp.Length > 0) { inp = inp.Substring(0, inp.Length - 1); Chinp(); } break;
 
-				case Keys.D0: inp += "0"; Chinp(); break;
-				case Keys.D1: inp += "1"; Chinp(); break;
-				case Keys.D2: inp += "2"; Chinp(); break;
-				case Keys.D3: inp += "3"; Chinp(); break;
-				case Keys.D4: inp += "4"; Chinp(); break;
-				case Keys.D5: inp += "5"; Chinp(); break;
-				case Keys.D6: inp += "6"; Chinp(); break;
-				case Keys.D7: inp += "7"; Chinp(); break;
-				case Keys.D8: inp += "8"; Chinp(); break;
-				case Keys.D9: inp += "9"; Chinp(); break;
-				case Keys.A: inp += "A"; Chinp(); break;
-				case Keys.B: inp += "B"; Chinp(); break;
-				case Keys.C: inp += "C"; Chinp(); break;
-				case Keys.D: inp += "D"; Chinp(); break;
-				case Keys.E: inp += "E"; Chinp(); break;
-				case Keys.F: inp += "F"; Chinp(); break;
-				case Keys.G: inp += "G"; Chinp(); break;
-				case Keys.H: inp += "H"; Chinp(); break;
-				case Keys.I: inp += "I"; Chinp(); break;
-				case Keys.J: inp += "J"; Chinp(); break;
-				case Keys.K: inp += "K"; Chinp(); break;
-				case Keys.L: inp += "L"; Chinp(); break;
-				case Keys.M: inp += "M"; Chinp(); break;
-				case Keys.N: inp += "N"; Chinp(); break;
-				case Keys.O: inp += "O"; Chinp(); break;
-				case Keys.P: inp += "P"; Chinp(); break;
-				case Keys.Q: inp += "Q"; Chinp(); break;
-				case Keys.R: inp += "R"; Chinp(); break;
-				case Keys.S: inp += "S"; Chinp(); break;
-				case Keys.T: inp += "T"; Chinp(); break;
-				case Keys.U: inp += "U"; Chinp(); break;
-				case Keys.V: inp += "V"; Chinp(); break;
-				case Keys.W: inp += "W"; Chinp(); break;
-				case Keys.X: inp += "X"; Chinp(); break;
-				case Keys.Y: inp += "Y"; Chinp(); break;
-				case Keys.Z: inp += "Z"; Chinp(); break;
+				case Keys.D0: ins("0"); break;
+				case Keys.D1: ins("1"); break;
+				case Keys.D2: ins("2"); break;
+				case Keys.D3: ins("3"); break;
+				case Keys.D4: ins("4"); break;
+				case Keys.D5: ins("5"); break;
+				case Keys.D6: ins("6"); break;
+				case Keys.D7: ins("7"); break;
+				case Keys.D8: ins("8"); break;
+				case Keys.D9: ins("9"); break;
+				case Keys.A:  ins("A"); break;
+				case Keys.B:  ins("B"); break;
+				case Keys.C:  ins("C"); break;
+				case Keys.D:  ins("D"); break;
+				case Keys.E:  ins("E"); break;
+				case Keys.F:  ins("F"); break;
+				case Keys.G:  ins("G"); break;
+				case Keys.H:  ins("H"); break;
+				case Keys.I:  ins("I"); break;
+				case Keys.J:  ins("J"); break;
+				case Keys.K:  ins("K"); break;
+				case Keys.L:  ins("L"); break;
+				case Keys.M:  ins("M"); break;
+				case Keys.N:  ins("N"); break;
+				case Keys.O:  ins("O"); break;
+				case Keys.P:  ins("P"); break;
+				case Keys.Q:  ins("Q"); break;
+				case Keys.R:  ins("R"); break;
+				case Keys.S:  ins("S"); break;
+				case Keys.T:  ins("T"); break;
+				case Keys.U:  ins("U"); break;
+				case Keys.V:  ins("V"); break;
+				case Keys.W:  ins("W"); break;
+				case Keys.X:  ins("X"); break;
+				case Keys.Y:  ins("Y"); break;
+				case Keys.Z:  ins("Z"); break;
 
 
 				default: break;
@@ -86,6 +86,11 @@ namespace Calculator {
 		}
 		private void Form1_Paint(object sender, PaintEventArgs e) { gf.DrawImage(gi, 0, 0); }
 
+		public void ins(string s) {
+
+
+			inp += s; Chinp();
+		}
 		public void Parse() {
 			DateTime st = DateTime.Now;
 			Draw(true);
@@ -155,41 +160,41 @@ namespace Calculator {
 			DateTime st;
 
 			outp += "\nKNTest:"; Draw(true);
-			st = DateTime.Now;
+			st = DateTime.Now; outp += "\nint + int: "; Draw(true);
 			for(int q = 0 ; q < 100000000 ; q++) { c = a + b; }
 			//gb.DrawString("int + int: " + (DateTime.Now - st).TotalMilliseconds + " ms", Font, Brushes.White, 6, l * 12 + 6); l++;
-			outp += "\nint + int: " + (DateTime.Now - st).TotalMilliseconds + " ms"; Draw(true);
-			st = DateTime.Now;
+			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; outp += "\nbyte+byte: "; Draw(true); 
 			for(int q = 0 ; q < 100000000 ; q++) { bc = (byte)(ba + bb); }
-			outp += "\nbyte+byte: " + (DateTime.Now - st).TotalMilliseconds + " ms"; Draw(true);
-			st = DateTime.Now;
+			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now;outp += "\nshrt+shrt: "; Draw(true); 
 			for(int q = 0 ; q < 100000000 ; q++) { sc = (short)(sa + sb); }
-			outp += "\nshrt+shrt: " + (DateTime.Now - st).TotalMilliseconds + " ms"; Draw(true);
-			st = DateTime.Now;
+			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now;outp += "\nlong+long: "; Draw(true);
 			for(int q = 0 ; q < 100000000 ; q++) { lc = la + lb; }
-			outp += "\nlong+long: " + (DateTime.Now - st).TotalMilliseconds + " ms"; Draw(true);
-			st = DateTime.Now;
+			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now;outp += "\ndbl + dbl: "; Draw(true);
 			for(int q = 0 ; q < 100000000 ; q++) { dc = da + db; }
-			outp += "\ndbl + dbl: " + (DateTime.Now - st).TotalMilliseconds + " ms"; Draw(true);
-			st = DateTime.Now;
+			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now;outp += "\nSabi+Sabi: "; Draw(true);
 			for(int q = 0 ; q < 100000000 ; q++) { cc = ca + cb; }
-			outp += "\nSabi+Sabi: " + (DateTime.Now - st).TotalMilliseconds + " ms"; Draw(true);
-			st = DateTime.Now;
+			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now;outp += "\nKabi+Kabi: "; Draw(true);
 			for(int q = 0 ; q < 100000000 ; q++) { kc = ka + kb; }
-			outp += "\nKabi+Kabi: " + (DateTime.Now - st).TotalMilliseconds + " ms"; Draw(true);
-			st = DateTime.Now;
+			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
 
 			l++;
 
+			st = DateTime.Now;outp += "\ni256+i256: "; Draw(true);
 			for(int q = 0 ; q < 100000 ; q++) { ic = ia + ib; }
-			outp += "\ni256+i256: " + (DateTime.Now - st).TotalMilliseconds + " ms"; Draw(true);
-			st = DateTime.Now;
+			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now;outp += "\nBigI+BigI: "; Draw(true);
 			for(int q = 0 ; q < 100000 ; q++) { Ic = Ia + Ib; }
-			outp += "\nBigI+BigI: " + (DateTime.Now - st).TotalMilliseconds + " ms"; Draw(true);
+			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
 
 			l++;
 
-			st = DateTime.Now;
+			st = DateTime.Now;outp += "\nS1024: "; Draw(true);
 			//cc = new System.Numerics.Complex(0, 0); 
 			for(int y=0 ; y < 1024 ; y++) {
 				for(int x=0 ; x < 1024 ; x++) {
@@ -197,8 +202,8 @@ namespace Calculator {
 					ca = System.Numerics.Complex.Log(new System.Numerics.Complex(x, y)); c = this.c(ca);
 				}
 			}
-			outp += "\nS1024: " + (DateTime.Now - st).TotalMilliseconds + " ms"; Draw(true);
-			st = DateTime.Now;
+			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now;outp += "\nK1024: "; Draw(true);
 			//kc = new Complex(0, 0);
 			for(int y=0 ; y < 1024 ; y++) {
 				for(int x=0 ; x < 1024 ; x++) {
@@ -206,7 +211,7 @@ namespace Calculator {
 					ka = (new Complex(x, y)).ln(); c = ka.c;
 				}
 			}
-			outp += "\nK1024: " + (DateTime.Now - st).TotalMilliseconds + " ms"; Draw(true);
+			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
 
 			//gb.DrawString(ia.ToString() + "\n" + ia.ToString(true), Font, Brushes.White, 20, 20);
 			//gb.DrawString(ib.ToString() + "\n" + ib.ToString(true), Font, Brushes.White, 300, 20);
