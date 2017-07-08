@@ -17,8 +17,40 @@ namespace Calculator {
 		static int fx, fy, fx2, fy2;
 		Rectangle recti, recto, rectv;
 		#endregion Graphics
-		string inp = "", outp = "", varp = "", tym = "", ans = ""; int inpp = 0;
+		#region IO Strings
+		/// <summary>
+		/// The input box text, pressing enter will send this to the parser
+		/// </summary>
+		string inp = "";
+		/// <summary>
+		/// The output box text, where everything is stored
+		/// </summary>
+		string outp = "";
+		/// <summary>
+		/// The variable box text, unimplemented
+		/// </summary>
+		string varp = "";
+		/// <summary>
+		/// The string that holds the "Parse: Calc: Draw: " timings for every calculations before it's pushed to outp
+		/// </summary>
+		string tym = "";
+		/// <summary>
+		/// The answer from the previous calculation
+		/// </summary>
+		string ans = "";
+		/// <summary>
+		/// Input position, used for input text editing
+		/// </summary>
+		int inpp = 0;
+		/// <summary>
+		/// Selection position, used for selecting text
+		/// </summary>
+		int selp = 0;
+		/// <summary>
+		/// The list of input commands parsed from inp
+		/// </summary>
 		List<string> i;
+		#endregion IO Strings
 		#endregion Variables
 
 		#region Events
@@ -59,8 +91,8 @@ namespace Calculator {
 					switch(e.KeyCode) {
 						#region Control keys
 						case Keys.Escape: Close(); break;
-						case Keys.Enter: Calc(); break;
-						case Keys.Back: if(inp.Length > 0) { inp = inp.Substring(0, inp.Length - 1); Chinp(); } break;
+						case Keys.Enter: if(inp.Length > 0) Calc(); break;
+						case Keys.Back: if(inp.Length > 0 && inpp > 0) {inp = inp.Substring(0, inpp - 1) + ((inpp == inp.Length) ? "" : inp.Substring(inpp, inp.Length - 1)); inpp -= 1; Chinp(); Text = inpp.ToString(); } break;
 						case Keys.Space: ins(" "); break;
 						#endregion Control keys
 
@@ -75,6 +107,7 @@ namespace Calculator {
 						case Keys.D7: case Keys.NumPad7: ins("7"); break;
 						case Keys.D8: case Keys.NumPad8: ins("8"); break;
 						case Keys.D9: case Keys.NumPad9: ins("9"); break;
+						case Keys.OemPeriod: case Keys.Decimal: ins("."); break;
 						#endregion Number keys (useful for a calculator)
 
 						#region Alphabetic keys
@@ -154,6 +187,7 @@ namespace Calculator {
 
 						#region Mathematical symbols
 						case Keys.Oemplus: ins("+"); break;
+						case Keys.D6: ins("^"); break;
 						case Keys.D8: ins("*"); break;
 						#endregion Mathematical symbols
 
@@ -176,59 +210,63 @@ namespace Calculator {
 
 		#region IO Pipeline
 		public void ins(string s) {
-
-
-			inp += s; Chinp();
+			inp += s; inpp += s.Length; Chinp(); 
 		} // void ins(string s)
 		public bool Parse() {
-			DateTime st = DateTime.Now;
 			Draw(true);
-			switch(inp) {
-				case "": break;
-				case "TEST": KNTest(); break;
+			DateTime st = DateTime.Now;
+			i.Clear(); //ans = "";
+			char v; string reg = "";
+			List<String> nm = new List<string>(), op = new List<string>();
+			for(int q = 0; q < inp.Length; q++) {
+				v = inp[q];
+				if(char.IsLetterOrDigit(v) || (v == '.' && reg.Length > 0)) { reg += v; } else {
+					ParseReg(reg); reg = "";
+					i.Add(v.ToString());
+					//switch(v) {
+					//	case ' ': break;
+					//	case '+': i.Add("+"); break;
+					//	case '-': i.Add("-"); break;
+					//	case '*': i.Add("*"); break;
+					//	case '/': i.Add("/"); break;
+
+					//	default:  break;
+					//} // switch(v)
+				} // else
+			} // for(int q = 0; q < inp.Length; q++)
+			if(reg.Length > 0) ParseReg(reg);
+			//foreach(string s in i) 
+			//ans += "\n\"" + s + "\"";
 
 
-				#region default
-				default:
-					i.Clear(); ans = ""; char v; string reg = "";
-					for(int q = 0; q < inp.Length; q++) {
-						v = inp[q];
-						if(char.IsLetterOrDigit(v)) { reg += v; } else {
-							i.Add(reg);
-
-
-							reg = "";
-							switch(v) {
-								case ' ': break;
-								case '+': i.Add("+"); break;
-								case '-': i.Add("-"); break;
-								case '*': i.Add("*"); break;
-								case '/': i.Add("/"); break;
-
-								default: i.Add(v.ToString()); break;
-							} // switch(v)
-						} // else
-					} // for(int q = 0; q < inp.Length; q++)
-					foreach(string s in i) 
-						ans += "\n\"" + s + "\"";
-					break;
-				#endregion default
-			} // switch(inp)
-
-			
 			tym = "\nParse: " + (DateTime.Now - st).TotalMilliseconds + "; ";
 			return true;
 		} // void Parse()
+		public void ParseReg(string reg) {
+			i.Add(reg);
+
+		}
 		public void Calc() {
 			DateTime st = DateTime.Now;
 			if(Parse()) {
-				st = DateTime.Now; ans = ""; double tmp = 0.0; Stack<double> s = new Stack<double>(); ;
+				st = DateTime.Now; //ans = "";
+				double tmp = 0.0; Stack<double> s = new Stack<double>(); ;
 				for (int q = 0; q < i.Count; q++) {
 					if(double.TryParse(i[q], out tmp)) {
 						s.Push(tmp);
 
 					} else {
 						switch (i[q]) {
+								// Control
+							case "TEST": KNTest(); break;
+							case "cls": outp = ""; break;
+
+								// Constants
+							case "ans": if(double.TryParse(ans, out tmp)) s.Push(tmp); break;
+							case "pi": s.Push(Math.PI); break;
+							case "e": s.Push(Math.E); break;
+
+								// Operators
 							case "+":
 								if(s.Count > 1) tmp = s.Pop() + s.Pop();
 								else if(s.Count == 1 && double.TryParse(ans, out tmp)) tmp += s.Pop();
@@ -245,8 +283,17 @@ namespace Calculator {
 								if(s.Count > 0) tmp = 1.0 / s.Pop();
 								else if(s.Count == 0 && double.TryParse(ans, out tmp)) tmp = 1.0 / tmp;
 								s.Push(tmp); break;
+							case "^":
+								if(s.Count > 0) tmp = s.Pop(); // Math.Pow(, s.Pop());
+								else if(s.Count == 0 && double.TryParse(ans, out tmp)) ; tmp = Math.Pow(s.Pop(), tmp);
+								s.Push(tmp); break;
 
-
+								// Functions
+							case "pfact":
+								if(s.Count > 0) tmp = s.Pop(); // Math.Pow(, s.Pop());
+								else if(s.Count == 0 && double.TryParse(ans, out tmp)) ; foreach(int pf in KN.listpfact((int)tmp)) s.Push(pf);
+								//s.Push(tmp);
+								break;
 
 						} // switch (i[q])
 
@@ -254,35 +301,42 @@ namespace Calculator {
 					} // if(!double.TryParse(i[q], out tmp))
 
 				} // for (int q = 0; q < i.Count; q++)
-				if(s.Count == 1) { ans = s.Pop().ToString(); }
+				//if(s.Count == 0) { inp = ""; Draw(); return; }
+				//if(ans != "") inp += "ans = " + ans;
+				if(s.Count == 1) { ans = s.Pop().ToString(); } else {
+					inp = "ERROR! ans = " + ans;
+					inp += "\nERROR! i[] = ["; foreach(string thing in i) inp += thing.ToString() + ", "; inp += "]";
+					inp += "\nERROR! s[] = ["; foreach(double thing in s) inp += thing.ToString() + ", "; inp += "]";
+				}
 				//outp += "\n\nans = " + ans + "\n\n";
 				inp += " = \n" + ans; 
 			} // if(Parse())
-			outp += "\n> " + inp; inp = "";
+			outp += "\n> " + inp; inp = ""; inpp = selp = 0; Text = inpp.ToString();
 			tym += "Calc: " + (DateTime.Now - st).TotalMilliseconds + "; ";
 			Draw();
 		} // void Calc()
 		public void Chinp() {
 			gb.FillRectangle(Brushes.DarkBlue, recti); // inp
 			gb.DrawString(inp, Font, Brushes.White, recti.Location);
-			gf.DrawImage(gi, 0, 0);
+			Text = inpp.ToString(); gf.DrawImage(gi, 0, 0);
 		} // void Chinp()
 		public void Draw(bool busy = false) {
 			DateTime st = DateTime.Now;
 			gb.Clear(busy ? Color.White : Color.Black);
 			gb.FillRectangle(Brushes.DarkRed, recto); // outp
 			gb.FillRectangle(Brushes.DarkGreen, rectv); // varp
-			gb.FillRectangle(Brushes.DarkBlue, recti); // inp
+			//gb.FillRectangle(Brushes.DarkBlue, recti); // inp
 
 			if(!busy) {
 				tym += "Draw: " + (DateTime.Now - st).TotalMilliseconds + " ms";
 				outp += tym;
 			} // if(!busy)
 
-			gb.DrawString(inp, Font, Brushes.White, recti.Location);
+			//gb.DrawString(inp, Font, Brushes.White, recti.Location);
 			gb.DrawString(outp, Font, Brushes.White, recto.Location);
 			gb.DrawString(varp, Font, Brushes.White, rectv.Location);
-			gf.DrawImage(gi, 0, 0);
+			//gf.DrawImage(gi, 0, 0);
+			Chinp();
 		} // void Draw(bool busy = false)
 		#endregion IO Pipeline
 
@@ -341,7 +395,9 @@ namespace Calculator {
 			for(int y = 0; y < 1024; y++) {
 				for(int x = 0; x < 1024; x++) {
 					//cb = new System.Numerics.Complex(-x, -y) + cc; 
-					ca = System.Numerics.Complex.Log(new System.Numerics.Complex(x, y)); c = this.c(ca);
+					//ca = System.Numerics.Complex.Log(new System.Numerics.Complex(x, y)); 
+					ca = new System.Numerics.Complex(x, y).Phase;
+					c = this.c(ca);
 				}
 			}
 			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
@@ -350,7 +406,7 @@ namespace Calculator {
 			for(int y = 0; y < 1024; y++) {
 				for(int x = 0; x < 1024; x++) {
 					//kb = new Complex(-x, -y) + kc;
-					ka = (new Complex(x, y)).ln(); c = ka.c;
+					ka = (new Complex(x, y)).t; c = ka.c;
 				}
 			}
 			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
