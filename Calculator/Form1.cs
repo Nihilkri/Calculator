@@ -15,29 +15,52 @@ namespace Calculator {
 		#region Graphics
 		static Graphics gb, gf; static Bitmap gi;
 		static int fx, fy, fx2, fy2;
-		Rectangle recti, recto, rectv;
+		/// <summary>
+		/// The rectangle of the status box
+		/// </summary>
+		Rectangle rects;
+		/// <summary>
+		/// The rectangle of the input box
+		/// </summary>
+		Rectangle recti;
+		/// <summary>
+		/// The rectangle of the output box
+		/// </summary>
+		Rectangle recto;
+		/// <summary>
+		/// The rectangle of the variable box
+		/// </summary>
+		Rectangle rectv;
+		/// <summary>
+		/// The rectangle of the graphing box, unimplemented
+		/// </summary>
+		Rectangle rectg;
 		#endregion Graphics
 		#region IO Strings
 		/// <summary>
+		/// The status box text, used to show calculation status and mode selection
+		/// </summary>
+		string txtsta = "";
+		/// <summary>
 		/// The input box text, pressing enter will send this to the parser
 		/// </summary>
-		string inp = "";
+		string txtinp = "";
 		/// <summary>
 		/// The output box text, where everything is stored
 		/// </summary>
-		string outp = "";
+		string txtout = "";
 		/// <summary>
 		/// The variable box text, unimplemented
 		/// </summary>
-		string varp = "";
+		string txtvar = "";
 		/// <summary>
-		/// The string that holds the "Parse: Calc: Draw: " timings for every calculations before it's pushed to outp
+		/// The string that holds the "Parse: Calc: Draw: " timings for every calculations before it's pushed to txtout
 		/// </summary>
-		string tym = "";
+		string txttym = "";
 		/// <summary>
 		/// The answer from the previous calculation
 		/// </summary>
-		string ans = "";
+		string txtans = "";
 		/// <summary>
 		/// Input position, used for input text editing
 		/// </summary>
@@ -46,11 +69,18 @@ namespace Calculator {
 		/// Selection position, used for selecting text
 		/// </summary>
 		int selp = 0;
-		/// <summary>
-		/// The list of input commands parsed from inp
-		/// </summary>
-		List<string> i;
 		#endregion IO Strings
+		#region Control and Calculation
+		/// <summary>
+		/// The mode dictionary, that holds all the options and runtime preferences
+		/// </summary>
+		Dictionary<string, string> mode = new Dictionary<string, string>();
+		/// <summary>
+		/// The list of input commands parsed from txtinp
+		/// </summary>
+		List<string> i = new List<string>();
+
+		#endregion Control and Calculation
 		#endregion Variables
 
 		#region Events
@@ -62,16 +92,36 @@ namespace Calculator {
 			gb = Graphics.FromImage(gi);
 			gf = CreateGraphics();
 
+			#region Rectangle Definition
 			// Define the three rectangles
-			// b = border width, w = variable width
-			int b = 5, w = 60, lx = fx - w - 3 * b, ly = fy - w - 3 * b;
-			int ox = b, oy = b, ix = b, iy = ly + 2 * b, vx = lx + 2 * b, vy = b;
-			int ow = lx, oh = ly, iw = lx, ih = w, vw = w, vh = fy - 2 * b;
+			// b = border width, w = input/variable width
+			// A border of 5 pixels around and between all four areas. rects taking the full top width, rectv taking the remaining right side, with recti taking the remaining bottom, all of width 60. recto takes the remaining top left area under rects
+			int b = 5, w = 44;
+			int lx = fx - w - 3 * b, ly = fy - w - 2 * b;
+
+			int sx = b, sy = b;
+			int vx = lx + 2 * b, vy = w + 2 * b;
+			int ix = b, iy = ly + b;
+			int ox = b, oy = w + 2 * b;
+
+			int sw = fx - 2 * b, sh = w;
+			int vw = w, vh = fy - vy - b;
+			int iw = lx, ih = w;
+			int ow = lx, oh = ly - oy;
+			// A border of 5 pixels around and between all three areas, rectv taking the full right side with recti taking the remaining bottom, both of width 60, with recto taking the remaining top left
+			//int b = 5, w = 60, lx = fx - w - 3 * b, ly = fy - w - 3 * b;
+			//int ox = b, oy = b, ix = b, iy = ly + 2 * b, vx = lx + 2 * b, vy = b;
+			//int ow = lx, oh = ly, iw = lx, ih = w, vw = w, vh = fy - 2 * b;
+			rects = new Rectangle(sx, sy, sw, sh);
 			recti = new Rectangle(ix, iy, iw, ih);
 			recto = new Rectangle(ox, oy, ow, oh);
 			rectv = new Rectangle(vx, vy, vw, vh);
-			i = new List<string>();
+			#endregion Rectangle Definition
+			#region Initialization
+			mode.Add("Mode", "Normal");
+			mode.Add("Debug", "0");
 
+			#endregion Initialization
 			Draw();
 
 			DateTime st = DateTime.Now;
@@ -91,8 +141,8 @@ namespace Calculator {
 					switch(e.KeyCode) {
 						#region Control keys
 						case Keys.Escape: Close(); break;
-						case Keys.Enter: if(inp.Length > 0) Calc(); break;
-						case Keys.Back: if(inp.Length > 0 && inpp > 0) {inp = inp.Substring(0, inpp - 1) + ((inpp == inp.Length) ? "" : inp.Substring(inpp, inp.Length - 1)); inpp -= 1; Chinp(); Text = inpp.ToString(); } break;
+						case Keys.Enter: if(txtinp.Length > 0) Calc(); break;
+						case Keys.Back: if(txtinp.Length > 0 && inpp > 0) {txtinp = txtinp.Substring(0, inpp - 1) + ((inpp == txtinp.Length) ? "" : txtinp.Substring(inpp, txtinp.Length - 1)); inpp -= 1; Chinp(); Text = inpp.ToString(); } break;
 						case Keys.Space: ins(" "); break;
 						#endregion Control keys
 
@@ -156,6 +206,10 @@ namespace Calculator {
 				#region If shift is held
 				case Keys.Shift:
 					switch(e.KeyCode) {
+						#region Control keys
+						case Keys.Enter: ins("\n"); break;
+						#endregion Control keys
+
 						#region Capital letters
 						case Keys.A: ins("A"); break;
 						case Keys.B: ins("B"); break;
@@ -210,16 +264,16 @@ namespace Calculator {
 
 		#region IO Pipeline
 		public void ins(string s) {
-			inp += s; inpp += s.Length; Chinp(); 
+			txtinp += s; inpp += s.Length; Chinp(); 
 		} // void ins(string s)
 		public bool Parse() {
 			Draw(true);
 			DateTime st = DateTime.Now;
-			i.Clear(); //ans = "";
+			i.Clear(); //txtans = "";
 			char v; string reg = "";
 			List<String> nm = new List<string>(), op = new List<string>();
-			for(int q = 0; q < inp.Length; q++) {
-				v = inp[q];
+			for(int q = 0; q < txtinp.Length; q++) {
+				v = txtinp[q];
 				if(char.IsLetterOrDigit(v) || (v == '.' && reg.Length > 0)) { reg += v; } else {
 					ParseReg(reg); reg = "";
 					i.Add(v.ToString());
@@ -233,13 +287,13 @@ namespace Calculator {
 					//	default:  break;
 					//} // switch(v)
 				} // else
-			} // for(int q = 0; q < inp.Length; q++)
+			} // for(int q = 0; q < txtinp.Length; q++)
 			if(reg.Length > 0) ParseReg(reg);
 			//foreach(string s in i) 
-			//ans += "\n\"" + s + "\"";
+			//txtans += "\n\"" + s + "\"";
 
 
-			tym = "\nParse: " + (DateTime.Now - st).TotalMilliseconds + "; ";
+			txttym = "Parse: " + (DateTime.Now - st).TotalMilliseconds + "; ";
 			return true;
 		} // void Parse()
 		public void ParseReg(string reg) {
@@ -249,7 +303,7 @@ namespace Calculator {
 		public void Calc() {
 			DateTime st = DateTime.Now;
 			if(Parse()) {
-				st = DateTime.Now; //ans = "";
+				st = DateTime.Now; //txtans = "";
 				double tmp = 0.0; Stack<double> s = new Stack<double>(); ;
 				for (int q = 0; q < i.Count; q++) {
 					if(double.TryParse(i[q], out tmp)) {
@@ -259,39 +313,40 @@ namespace Calculator {
 						switch (i[q]) {
 								// Control
 							case "TEST": KNTest(); break;
-							case "cls": outp = ""; break;
+							case "cls": txtout = ""; break;
+							case "debug": mode["Debug"] = (s.Count == 0) ? "0.0" : s.Pop().ToString(); break;
 
 								// Constants
-							case "ans": if(double.TryParse(ans, out tmp)) s.Push(tmp); break;
+							case "txtans": if(double.TryParse(txtans, out tmp)) s.Push(tmp); break;
 							case "pi": s.Push(Math.PI); break;
 							case "e": s.Push(Math.E); break;
 
 								// Operators
 							case "+":
 								if(s.Count > 1) tmp = s.Pop() + s.Pop();
-								else if(s.Count == 1 && double.TryParse(ans, out tmp)) tmp += s.Pop();
+								else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp += s.Pop();
 								s.Push(tmp); break;
 							case "-":
 								if(s.Count > 0) tmp = -s.Pop();
-								else if(s.Count == 0 && double.TryParse(ans, out tmp)) tmp = -tmp;
+								else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = -tmp;
 								s.Push(tmp); break;
 							case "*":
 								if(s.Count > 1) tmp = s.Pop() * s.Pop();
-								else if(s.Count == 1 && double.TryParse(ans, out tmp)) tmp *= s.Pop();
+								else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp *= s.Pop();
 								s.Push(tmp); break;
 							case "/":
 								if(s.Count > 0) tmp = 1.0 / s.Pop();
-								else if(s.Count == 0 && double.TryParse(ans, out tmp)) tmp = 1.0 / tmp;
+								else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = 1.0 / tmp;
 								s.Push(tmp); break;
 							case "^":
 								if(s.Count > 0) tmp = s.Pop(); // Math.Pow(, s.Pop());
-								else if(s.Count == 0 && double.TryParse(ans, out tmp)) ; tmp = Math.Pow(s.Pop(), tmp);
+								else if(s.Count == 0 && double.TryParse(txtans, out tmp)) ; tmp = Math.Pow(s.Pop(), tmp);
 								s.Push(tmp); break;
 
 								// Functions
 							case "pfact":
 								if(s.Count > 0) tmp = s.Pop(); // Math.Pow(, s.Pop());
-								else if(s.Count == 0 && double.TryParse(ans, out tmp)) ; foreach(int pf in KN.listpfact((int)tmp)) s.Push(pf);
+								else if(s.Count == 0 && double.TryParse(txtans, out tmp)) ; foreach(int pf in KN.listpfact((int)tmp)) s.Push(pf);
 								//s.Push(tmp);
 								break;
 
@@ -301,40 +356,47 @@ namespace Calculator {
 					} // if(!double.TryParse(i[q], out tmp))
 
 				} // for (int q = 0; q < i.Count; q++)
-				//if(s.Count == 0) { inp = ""; Draw(); return; }
-				//if(ans != "") inp += "ans = " + ans;
-				if(s.Count == 1) { ans = s.Pop().ToString(); } else {
-					inp = "ERROR! ans = " + ans;
-					inp += "\nERROR! i[] = ["; foreach(string thing in i) inp += thing.ToString() + ", "; inp += "]";
-					inp += "\nERROR! s[] = ["; foreach(double thing in s) inp += thing.ToString() + ", "; inp += "]";
+				//if(txtans != "") txtinp += "txtans = " + txtans;
+				if(s.Count == 0) { txtinp = ""; } else
+				if(s.Count == 1) { txtans = s.Pop().ToString(); txtinp = "> " + txtinp + " = " + txtans + "\n"; Clipboard.SetText(txtinp); } else {
+					txtinp = "> ERROR! txtinp = " + txtinp;
+					txtinp += "\n  ERROR! txtans = " + txtans;
+					txtinp += "\n  ERROR! i[] = ["; foreach(string thing in i) txtinp += thing.ToString() + ", "; txtinp += "]";
+					txtinp += "\n  ERROR! s[] = ["; foreach(double thing in s) txtinp += thing.ToString() + ", "; txtinp += "]\n";
 				}
-				//outp += "\n\nans = " + ans + "\n\n";
-				inp += " = \n" + ans; 
+				txtout += txtinp; txtinp = ""; inpp = selp = 0; Text = inpp.ToString();
+				//txtout += "\n\nans = " + txtans + "\n\n";
 			} // if(Parse())
-			outp += "\n> " + inp; inp = ""; inpp = selp = 0; Text = inpp.ToString();
-			tym += "Calc: " + (DateTime.Now - st).TotalMilliseconds + "; ";
+			txttym += "Calc: " + (DateTime.Now - st).TotalMilliseconds + "; ";
 			Draw();
 		} // void Calc()
 		public void Chinp() {
-			gb.FillRectangle(Brushes.DarkBlue, recti); // inp
-			gb.DrawString(inp, Font, Brushes.White, recti.Location);
+			gb.FillRectangle(Brushes.DarkBlue, recti); // txtinp
+			gb.DrawRectangle(Pens.LightBlue, recti); // txtinp
+			gb.DrawString(txtinp, Font, Brushes.White, recti.Location);
 			Text = inpp.ToString(); gf.DrawImage(gi, 0, 0);
 		} // void Chinp()
 		public void Draw(bool busy = false) {
 			DateTime st = DateTime.Now;
 			gb.Clear(busy ? Color.White : Color.Black);
-			gb.FillRectangle(Brushes.DarkRed, recto); // outp
-			gb.FillRectangle(Brushes.DarkGreen, rectv); // varp
-			//gb.FillRectangle(Brushes.DarkBlue, recti); // inp
+			gb.FillRectangle(Brushes.DarkSlateGray, rects); // status
+			gb.FillRectangle(Brushes.DarkRed, recto); // txtout
+			gb.FillRectangle(Brushes.DarkGreen, rectv); // txtvar
+			gb.DrawRectangle(Pens.Cyan, rects); // Status
+			gb.DrawRectangle(Pens.Pink, recto); // txtout
+			gb.DrawRectangle(Pens.LightGreen, rectv); // txtvar
 
 			if(!busy) {
-				tym += "Draw: " + (DateTime.Now - st).TotalMilliseconds + " ms";
-				outp += tym;
+				txttym += "Draw: " + (DateTime.Now - st).TotalMilliseconds + " ms\n";
+				if(mode["Debug"] == "0") txtsta = txttym; else { txtout += txttym; txtsta = "\n"; }
+				txtsta += "\nMode: " + mode["Mode"].ToString();
+				txtsta += "\nDebug: " + mode["Debug"].ToString();
 			} // if(!busy)
 
-			//gb.DrawString(inp, Font, Brushes.White, recti.Location);
-			gb.DrawString(outp, Font, Brushes.White, recto.Location);
-			gb.DrawString(varp, Font, Brushes.White, rectv.Location);
+			//gb.DrawString(txtinp, Font, Brushes.White, recti.Location);
+			gb.DrawString(txtout, Font, Brushes.White, recto.Location);
+			gb.DrawString(txtvar, Font, Brushes.White, rectv.Location);
+			gb.DrawString(txtsta, Font, Brushes.White, rects.Location);
 			//gf.DrawImage(gi, 0, 0);
 			Chinp();
 		} // void Draw(bool busy = false)
@@ -355,42 +417,42 @@ namespace Calculator {
 			Complex ka = a, kb = b, kc = c;
 			DateTime st;
 
-			outp += "\nKNTest:"; Draw(true);
-			st = DateTime.Now; outp += "\nint + int: "; Draw(true);
+			txtout += "\nKNTest:"; Draw(true);
+			st = DateTime.Now; txtout += "\nint + int: "; Draw(true);
 			for(int q = 0; q < 100000000; q++) { c = a + b; }
 			//gb.DrawString("int + int: " + (DateTime.Now - st).TotalMilliseconds + " ms", Font, Brushes.White, 6, l * 12 + 6); l++;
-			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
-			st = DateTime.Now; outp += "\nbyte+byte: "; Draw(true);
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; txtout += "\nbyte+byte: "; Draw(true);
 			for(int q = 0; q < 100000000; q++) { bc = (byte)(ba + bb); }
-			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
-			st = DateTime.Now; outp += "\nshrt+shrt: "; Draw(true);
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; txtout += "\nshrt+shrt: "; Draw(true);
 			for(int q = 0; q < 100000000; q++) { sc = (short)(sa + sb); }
-			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
-			st = DateTime.Now; outp += "\nlong+long: "; Draw(true);
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; txtout += "\nlong+long: "; Draw(true);
 			for(int q = 0; q < 100000000; q++) { lc = la + lb; }
-			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
-			st = DateTime.Now; outp += "\ndbl + dbl: "; Draw(true);
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; txtout += "\ndbl + dbl: "; Draw(true);
 			for(int q = 0; q < 100000000; q++) { dc = da + db; }
-			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
-			st = DateTime.Now; outp += "\nSabi+Sabi: "; Draw(true);
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; txtout += "\nSabi+Sabi: "; Draw(true);
 			for(int q = 0; q < 100000000; q++) { cc = ca + cb; }
-			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
-			st = DateTime.Now; outp += "\nKabi+Kabi: "; Draw(true);
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; txtout += "\nKabi+Kabi: "; Draw(true);
 			for(int q = 0; q < 100000000; q++) { kc = ka + kb; }
-			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
 
 			l++;
 
-			st = DateTime.Now; outp += "\ni256+i256: "; Draw(true);
+			st = DateTime.Now; txtout += "\ni256+i256: "; Draw(true);
 			for(int q = 0; q < 100000; q++) { ic = ia + ib; }
-			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
-			st = DateTime.Now; outp += "\nBigI+BigI: "; Draw(true);
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; txtout += "\nBigI+BigI: "; Draw(true);
 			for(int q = 0; q < 100000; q++) { Ic = Ia + Ib; }
-			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
 
 			l++;
 
-			st = DateTime.Now; outp += "\nS1024: "; Draw(true);
+			st = DateTime.Now; txtout += "\nS1024: "; Draw(true);
 			//cc = new System.Numerics.Complex(0, 0); 
 			for(int y = 0; y < 1024; y++) {
 				for(int x = 0; x < 1024; x++) {
@@ -400,8 +462,8 @@ namespace Calculator {
 					c = this.c(ca);
 				}
 			}
-			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
-			st = DateTime.Now; outp += "\nK1024: "; Draw(true);
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; txtout += "\nK1024: "; Draw(true);
 			//kc = new Complex(0, 0);
 			for(int y = 0; y < 1024; y++) {
 				for(int x = 0; x < 1024; x++) {
@@ -409,7 +471,7 @@ namespace Calculator {
 					ka = (new Complex(x, y)).t; c = ka.c;
 				}
 			}
-			outp += (DateTime.Now - st).TotalMilliseconds + " ms";
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
 
 			//gb.DrawString(ia.ToString() + "\n" + ia.ToString(true), Font, Brushes.White, 20, 20);
 			//gb.DrawString(ib.ToString() + "\n" + ib.ToString(true), Font, Brushes.White, 300, 20);
