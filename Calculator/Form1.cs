@@ -149,13 +149,20 @@ namespace Calculator {
 						#region Control keys
 						case Keys.Escape: Close(); break;
 						case Keys.Enter: if(txtinp.Length > 0) Calc(); break;
-						case Keys.Back: if(txtinp.Length > 0 && inpp > 0) {
-								txtinp = txtinp.Substring(0, inpp - 1) + 
-									((inpp == txtinp.Length) ? "" : txtinp.Substring(inpp, txtinp.Length - inpp));
-								inpp -= 1; Chinp(); } break;
+						case Keys.Back:
+							if(selp == inpp) {
+								if(txtinp.Length > 0 && inpp > 0) {
+									txtinp = txtinp.Substring(0, inpp - 1) + txtinp.Substring(inpp);
+									selp = inpp -= 1; Chinp();
+								}
+							} else {
+								txtinp = txtinp.Substring(0, Math.Min(inpp, selp)) + txtinp.Substring(Math.Max(inpp, selp));
+								selp = inpp = Math.Min(inpp, selp); Chinp();
+							}
+							break;
 						case Keys.Space: ins(" "); break;
-						case Keys.Left: selp = inpp = Math.Max(0, inpp - 1); Chinp(); break;
-						case Keys.Right: selp = inpp = Math.Min(txtinp.Length, inpp + 1); Chinp(); break;
+						case Keys.Left: selp = inpp = Math.Max(0, Math.Min(inpp, selp) - 1); Chinp(); break;
+						case Keys.Right: selp = inpp = Math.Min(txtinp.Length, Math.Max(inpp, selp) + 1); Chinp(); break;
 						#endregion Control keys
 
 						#region Number keys (useful for a calculator)
@@ -220,6 +227,8 @@ namespace Calculator {
 					switch(e.KeyCode) {
 						#region Control keys
 						case Keys.Enter: ins("\n"); break;
+						case Keys.Left: selp = Math.Max(0, selp - 1); Chinp(); break;
+						case Keys.Right: selp = Math.Min(txtinp.Length, selp + 1); Chinp(); break;
 						#endregion Control keys
 
 						#region Capital letters
@@ -265,6 +274,37 @@ namespace Calculator {
 					} // switch(e.KeyCode)
 					break;
 				#endregion If shift is held
+				#region If ctrl is held
+				case Keys.Control:
+					switch(e.KeyCode) {
+						#region Control keys
+						#endregion Control keys
+
+						#region Capital letters
+						case Keys.X:
+							Clipboard.SetText(txtinp.Substring(Math.Min(inpp, selp), Math.Max(inpp, selp) - Math.Min(inpp, selp)));
+							txtinp = txtinp.Substring(0, Math.Min(inpp, selp)) + txtinp.Substring(Math.Max(inpp, selp));
+							selp = inpp = Math.Min(inpp, selp); Chinp();
+							break;
+						case Keys.C:
+							Clipboard.SetText(txtinp.Substring(Math.Min(inpp, selp), Math.Max(inpp, selp) - Math.Min(inpp, selp)));
+							break;
+						case Keys.V:
+							txtinp = txtinp.Substring(0, Math.Min(inpp, selp)) + Clipboard.GetText() + txtinp.Substring(Math.Max(inpp, selp));
+							selp = inpp = Math.Min(inpp, selp) + Clipboard.GetText().Length; Chinp();
+							break;
+
+						#endregion Capital letters
+
+						#region Mathematical symbols
+						#endregion Mathematical symbols
+
+
+						// Key not found, what's the keycode?
+						default: Text = "Ctrl + " + e.KeyCode.ToString(); break;
+					} // switch(e.KeyCode)
+					break;
+				#endregion If ctrl is held
 
 
 				// Key not found, what's the keycode?
@@ -278,8 +318,8 @@ namespace Calculator {
 
 		#region IO Pipeline
 		public void ins(string s) {
-			txtinp = txtinp.Substring(0, inpp) + s + txtinp.Substring(inpp);
-			inpp += s.Length; Chinp();
+			txtinp = txtinp.Substring(0, Math.Min(inpp, selp)) + s + txtinp.Substring(Math.Max(inpp, selp));
+			selp = inpp = Math.Min(inpp, selp) + s.Length; Chinp();
 		} // void ins(string s)
 		public string Parse() {
 			Draw(true);
@@ -457,9 +497,21 @@ namespace Calculator {
 		public void Chinp() {
 			gb.FillRectangle(Brushes.DarkBlue, recti); // txtinp
 			gb.DrawRectangle(Pens.LightBlue, recti); // txtinp
-			gb.DrawString(txtinp, Font, Brushes.White, recti.Location);
-			gb.DrawLine(Pens.White, recti.X + inpp * 6.9f, recti.Y + 11, recti.X + (inpp + 1) * 6.9f, recti.Y + 11);
-			Text = inpp.ToString(); gf.DrawImage(gi, 0, 0);
+			if(inpp == selp) {
+				gb.DrawString(txtinp, Font, Brushes.White, recti.Location);
+				gb.DrawLine(Pens.White, recti.X + inpp * 6.9f, recti.Y + 11, recti.X + (inpp + 1) * 6.9f, recti.Y + 11);
+				Text = "inpp = " + inpp.ToString();
+			} else {
+				int l = Math.Min(inpp, selp), r = Math.Max(inpp, selp);
+				float lp = recti.X + l * 6.9f, rp = recti.X + r * 6.9f;
+				gb.FillRectangle(Brushes.LightBlue, lp, recti.Y, rp - lp, 11);
+				gb.DrawString(txtinp.Substring(0, l), Font, Brushes.White, recti.X, recti.Y);
+				gb.DrawString(txtinp.Substring(l, r - l), Font, Brushes.White, lp, recti.Y + 11);
+				gb.DrawString(txtinp.Substring(r), Font, Brushes.White, rp, recti.Y + 22);
+				gb.DrawLine(Pens.White, recti.X + inpp * 6.9f, recti.Y + 11, recti.X + (inpp + 1) * 6.9f, recti.Y + 11);
+				Text = "inpp = " + inpp.ToString() + "    selp = " + selp.ToString();
+			}
+			gf.DrawImage(gi, 0, 0);
 		} // void Chinp()
 		public void Draw(bool busy = false) {
 			DateTime st = DateTime.Now;
