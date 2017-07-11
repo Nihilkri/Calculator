@@ -73,6 +73,14 @@ namespace Calculator {
 		/// Selection position, used for selecting text
 		/// </summary>
 		int selp = 0;
+		/// <summary>
+		/// The list of previous entries, press up and down to cycle
+		/// </summary>
+		List<string> hist = new List<string>();
+		/// <summary>
+		/// The current position in the history list
+		/// </summary>
+		int histp = 0;
 		#endregion IO Strings
 		#region Control and Calculation
 		/// <summary>
@@ -147,7 +155,7 @@ namespace Calculator {
 				case Keys.None:
 					switch(e.KeyCode) {
 						#region Control keys
-						case Keys.Escape: Close(); break;
+						case Keys.Escape: if(txtinp.Length == 0) Close(); else { txtinp = ""; selp = inpp = 0; Chinp(); } break;
 						case Keys.Enter: if(txtinp.Length > 0) Calc(); break;
 						case Keys.Back:
 							if(selp == inpp) {
@@ -163,6 +171,8 @@ namespace Calculator {
 						case Keys.Space: ins(" "); break;
 						case Keys.Left: selp = inpp = Math.Max(0, Math.Min(inpp, selp) - 1); Chinp(); break;
 						case Keys.Right: selp = inpp = Math.Min(txtinp.Length, Math.Max(inpp, selp) + 1); Chinp(); break;
+						case Keys.Up: if(histp > 0) txtinp = hist[--histp]; selp = inpp = txtinp.Length; Chinp(); break;
+						case Keys.Down: if(histp < hist.Count - 1) txtinp = hist[++histp]; selp = inpp = txtinp.Length; Chinp(); break;
 						#endregion Control keys
 
 						#region Number keys (useful for a calculator)
@@ -397,13 +407,17 @@ namespace Calculator {
 		} // string ParseErr(DateTime st, string err)
 		public int OpPrec(string op) {
 			switch(op) {
-				case "e": return -1;
+				case "ans": return -1;
 				case "pi": return -1;
+				case "e": return -1;
 				case "+": return 1;
 				case "*": return 2;
 				case "^": return 3;
 				case "-": return 4;
 				case "/": return 5;
+				case "ln": return 6;
+				case "sin": return 6;
+				case "cos": return 6;
 
 				default: return 0;
 			} // switch(op)
@@ -479,6 +493,7 @@ namespace Calculator {
 
 					} // for (int q = 0; q < i.Count; q++)
 						//if(txtans != "") txtinp += "txtans = " + txtans;
+					hist.Add(txtinp); histp = hist.Count;
 					if(s.Count == 0) { txtinp = ""; } else
 					if(s.Count == 1 || mode["Debug"] == "1") { txtans = s.Pop().ToString(); txtinp = "> " + txtinp + " = " + txtans + "\n"; Clipboard.SetText(txtinp); } else {
 						txtinp = "> ERROR! txtinp = " + txtinp;
