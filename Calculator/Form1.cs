@@ -149,8 +149,13 @@ namespace Calculator {
 						#region Control keys
 						case Keys.Escape: Close(); break;
 						case Keys.Enter: if(txtinp.Length > 0) Calc(); break;
-						case Keys.Back: if(txtinp.Length > 0 && inpp > 0) {txtinp = txtinp.Substring(0, inpp - 1) + ((inpp == txtinp.Length) ? "" : txtinp.Substring(inpp, txtinp.Length - 1)); inpp -= 1; Chinp(); Text = inpp.ToString(); } break;
+						case Keys.Back: if(txtinp.Length > 0 && inpp > 0) {
+								txtinp = txtinp.Substring(0, inpp - 1) + 
+									((inpp == txtinp.Length) ? "" : txtinp.Substring(inpp, txtinp.Length - inpp));
+								inpp -= 1; Chinp(); } break;
 						case Keys.Space: ins(" "); break;
+						case Keys.Left: selp = inpp = Math.Max(0, inpp - 1); Chinp(); break;
+						case Keys.Right: selp = inpp = Math.Min(txtinp.Length, inpp + 1); Chinp(); break;
 						#endregion Control keys
 
 						#region Number keys (useful for a calculator)
@@ -273,7 +278,8 @@ namespace Calculator {
 
 		#region IO Pipeline
 		public void ins(string s) {
-			txtinp += s; inpp += s.Length; Chinp(); 
+			txtinp = txtinp.Substring(0, inpp) + s + txtinp.Substring(inpp);
+			inpp += s.Length; Chinp();
 		} // void ins(string s)
 		public string Parse() {
 			Draw(true);
@@ -452,6 +458,7 @@ namespace Calculator {
 			gb.FillRectangle(Brushes.DarkBlue, recti); // txtinp
 			gb.DrawRectangle(Pens.LightBlue, recti); // txtinp
 			gb.DrawString(txtinp, Font, Brushes.White, recti.Location);
+			gb.DrawLine(Pens.White, recti.X + inpp * 6.9f, recti.Y + 11, recti.X + (inpp + 1) * 6.9f, recti.Y + 11);
 			Text = inpp.ToString(); gf.DrawImage(gi, 0, 0);
 		} // void Chinp()
 		public void Draw(bool busy = false) {
