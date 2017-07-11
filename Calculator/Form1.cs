@@ -62,6 +62,10 @@ namespace Calculator {
 		/// </summary>
 		string txtans = "";
 		/// <summary>
+		/// The answer from the previous calculation
+		/// </summary>
+		double ans = 0.0;
+		/// <summary>
 		/// Input position, used for input text editing
 		/// </summary>
 		int inpp = 0;
@@ -120,6 +124,9 @@ namespace Calculator {
 			#region Initialization
 			mode.Add("Mode", "Normal");
 			mode.Add("Debug", "0");
+			mode.Add("Entry", "RPN");
+			mode.Add("Type", "Double");
+			mode.Add("Error", "Initialization successful");
 
 			#endregion Initialization
 			Draw();
@@ -243,6 +250,8 @@ namespace Calculator {
 						case Keys.Oemplus: ins("+"); break;
 						case Keys.D6: ins("^"); break;
 						case Keys.D8: ins("*"); break;
+						case Keys.D9: ins("("); break;
+						case Keys.D0: ins(")"); break;
 						#endregion Mathematical symbols
 
 
@@ -266,107 +275,176 @@ namespace Calculator {
 		public void ins(string s) {
 			txtinp += s; inpp += s.Length; Chinp(); 
 		} // void ins(string s)
-		public bool Parse() {
+		public string Parse() {
 			Draw(true);
 			DateTime st = DateTime.Now;
 			i.Clear(); //txtans = "";
 			char v; string reg = "";
-			List<String> nm = new List<string>(), op = new List<string>();
+			Stack<String> nm = new Stack<string>(), op = new Stack<string>();
 			for(int q = 0; q < txtinp.Length; q++) {
 				v = txtinp[q];
-				if(char.IsLetterOrDigit(v) || (v == '.' && reg.Length > 0)) { reg += v; } else {
-					ParseReg(reg); reg = "";
-					i.Add(v.ToString());
-					//switch(v) {
-					//	case ' ': break;
-					//	case '+': i.Add("+"); break;
-					//	case '-': i.Add("-"); break;
-					//	case '*': i.Add("*"); break;
-					//	case '/': i.Add("/"); break;
+				if(char.IsLetterOrDigit(v) || (v == '.' && reg.Length > 0 && !reg.Contains("."))) { reg += v; } else {
+					ParseReg(reg, true); reg = "";
+					switch(v) {
+						case ' ': break;
+						case '.': i.Add("."); break;
+						case '+': i.Add("+"); break;
+						case '-': i.Add("-"); break;
+						case '*': i.Add("*"); break;
+						case '/': i.Add("/"); break;
+						case '^': i.Add("^"); break;
+						case '(': i.Add("("); break;
+						case ')': i.Add(")"); break;
 
-					//	default:  break;
-					//} // switch(v)
+						default: i.Add(v.ToString()); break;
+					} // switch(v)
 				} // else
 			} // for(int q = 0; q < txtinp.Length; q++)
-			if(reg.Length > 0) ParseReg(reg);
+			ParseReg(reg, true);
 			//foreach(string s in i) 
 			//txtans += "\n\"" + s + "\"";
 
+			#region Shunting Algorithm
+			if(mode["Entry"] == "Infix") {
+				double tmp = 0.0; List<string> a = new List<string>(i); i.Clear();
+				for(int q = 0; q < a.Count; q++) {
+					if(double.TryParse(a[q], out tmp) || OpPrec(a[q]) < 0) i.Add(a[q]);
+					else {
+						switch(a[q]) {
+							case "(": op.Push("("); break;
+							case ")":
+								while(op.Count > 0 && op.Peek() != "(") i.Add(op.Pop());
+								if(op.Count == 0) return ParseErr(st, "Error: Unpaired ) at token " + q.ToString());
+								op.Pop(); break;
+							default:
+								while(op.Count > 0 && OpPrec(op.Peek()) >= OpPrec(a[q]))
+									i.Add(op.Pop()); op.Push(a[q]);
+								break;
+						} // switch(a[q])
+					} // else
+				} // for(int q = 0; q < a.Count; q++)
+				while(op.Count > 0) {
+					if(op.Peek() == "(") return ParseErr(st, "Error: Unpaired (");// at token " + q.ToString());
+					i.Add(op.Pop());
+				}
 
-			txttym = "Parse: " + (DateTime.Now - st).TotalMilliseconds + "; ";
-			return true;
+			} // if(mode["Entry"] == "Infix")
+			#endregion Shunting Algorithm
+
+			return ParseErr(st, "Parse successful");
 		} // void Parse()
-		public void ParseReg(string reg) {
-			i.Add(reg);
+		public void ParseReg(string reg, bool rw) {
+			if(reg.Length == 0) return;
+			switch(reg) {
+				case "cls": txtout = ""; break;
+				case "rpn": mode["Entry"] = "RPN"; break;
+				case "infix": mode["Entry"] = "Infix"; break;
+				case "pn": mode["Entry"] = "PN"; break;
+				case "debug": mode["Debug"] = (1 - double.Parse(mode["Debug"])).ToString(); break;
+				default: if(rw) i.Add(reg); break;
+			}
 
-		}
+		} // void ParseReg(string reg)
+		public string ParseErr(DateTime st, string err) {
+			txttym = "Parse: " + (DateTime.Now - st).TotalMilliseconds + "; ";
+			return err;
+		} // string ParseErr(DateTime st, string err)
+		public int OpPrec(string op) {
+			switch(op) {
+				case "e": return -1;
+				case "pi": return -1;
+				case "+": return 1;
+				case "*": return 2;
+				case "^": return 3;
+				case "-": return 4;
+				case "/": return 5;
+
+				default: return 0;
+			} // switch(op)
+		} // int OpPrec(string op)
 		public void Calc() {
+			mode["Error"] = Parse();
 			DateTime st = DateTime.Now;
-			if(Parse()) {
-				st = DateTime.Now; //txtans = "";
-				double tmp = 0.0; Stack<double> s = new Stack<double>(); ;
-				for (int q = 0; q < i.Count; q++) {
-					if(double.TryParse(i[q], out tmp)) {
-						s.Push(tmp);
+			Type T = typeof(double);
+			switch(mode["Error"]) {
+				case "Parse successful":
+					//st = DateTime.Now; //txtans = "";
+					double tmp = 0.0; Stack<double> s = new Stack<double>();
+					for(int q = 0; q < i.Count; q++) {
+						if(double.TryParse(i[q], out tmp)) {
+							s.Push(tmp);
 
-					} else {
-						switch (i[q]) {
+						} else {
+							switch(i[q]) {
 								// Control
-							case "TEST": KNTest(); break;
-							case "cls": txtout = ""; break;
-							case "debug": mode["Debug"] = (s.Count == 0) ? "0.0" : s.Pop().ToString(); break;
+								case "TEST": KNTest(); break;
 
 								// Constants
-							case "txtans": if(double.TryParse(txtans, out tmp)) s.Push(tmp); break;
-							case "pi": s.Push(Math.PI); break;
-							case "e": s.Push(Math.E); break;
+								case "ans": if(double.TryParse(txtans, out tmp)) s.Push(tmp); break;
+								case "pi": s.Push(Math.PI); break;
+								case "e": s.Push(Math.E); break;
 
 								// Operators
-							case "+":
-								if(s.Count > 1) tmp = s.Pop() + s.Pop();
-								else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp += s.Pop();
-								s.Push(tmp); break;
-							case "-":
-								if(s.Count > 0) tmp = -s.Pop();
-								else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = -tmp;
-								s.Push(tmp); break;
-							case "*":
-								if(s.Count > 1) tmp = s.Pop() * s.Pop();
-								else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp *= s.Pop();
-								s.Push(tmp); break;
-							case "/":
-								if(s.Count > 0) tmp = 1.0 / s.Pop();
-								else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = 1.0 / tmp;
-								s.Push(tmp); break;
-							case "^":
-								if(s.Count > 0) tmp = s.Pop(); // Math.Pow(, s.Pop());
-								else if(s.Count == 0 && double.TryParse(txtans, out tmp)) ; tmp = Math.Pow(s.Pop(), tmp);
-								s.Push(tmp); break;
+								case "+":
+									if(s.Count > 1) tmp = s.Pop() + s.Pop();
+									else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp += s.Pop();
+									s.Push(tmp); break;
+								case "-":
+									if(s.Count > 0) tmp = -s.Pop();
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = -tmp;
+									s.Push(tmp); break;
+								case "*":
+									if(s.Count > 1) tmp = s.Pop() * s.Pop();
+									else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp *= s.Pop();
+									s.Push(tmp); break;
+								case "/":
+									if(s.Count > 0) tmp = 1.0 / s.Pop();
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = 1.0 / tmp;
+									s.Push(tmp); break;
+								case "^":
+									if(s.Count > 0) tmp = s.Pop(); // Math.Pow(, s.Pop());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) ; tmp = Math.Pow(s.Pop(), tmp);
+									s.Push(tmp); break;
 
 								// Functions
-							case "pfact":
-								if(s.Count > 0) tmp = s.Pop(); // Math.Pow(, s.Pop());
-								else if(s.Count == 0 && double.TryParse(txtans, out tmp)) ; foreach(int pf in KN.listpfact((int)tmp)) s.Push(pf);
-								//s.Push(tmp);
-								break;
+								case "ln":
+									if(s.Count > 0) tmp = Math.Log(s.Pop());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Log(tmp);
+									s.Push(tmp); break;
+								case "sin":
+									if(s.Count > 0) tmp = Math.Sin(s.Pop());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Sin(tmp);
+									s.Push(tmp); break;
+								case "cos":
+									if(s.Count > 0) tmp = Math.Cos(s.Pop());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Cos(tmp);
+									s.Push(tmp); break;
 
-						} // switch (i[q])
+								case "pfact":
+									if(s.Count > 0) tmp = s.Pop(); // Math.Pow(, s.Pop());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) ; foreach(int pf in KN.listpfact((int)tmp)) s.Push(pf);
+									//s.Push(tmp);
+									break;
+
+							} // switch (i[q])
 
 
-					} // if(!double.TryParse(i[q], out tmp))
+						} // if(!double.TryParse(i[q], out tmp))
 
-				} // for (int q = 0; q < i.Count; q++)
-				//if(txtans != "") txtinp += "txtans = " + txtans;
-				if(s.Count == 0) { txtinp = ""; } else
-				if(s.Count == 1) { txtans = s.Pop().ToString(); txtinp = "> " + txtinp + " = " + txtans + "\n"; Clipboard.SetText(txtinp); } else {
-					txtinp = "> ERROR! txtinp = " + txtinp;
-					txtinp += "\n  ERROR! txtans = " + txtans;
-					txtinp += "\n  ERROR! i[] = ["; foreach(string thing in i) txtinp += thing.ToString() + ", "; txtinp += "]";
-					txtinp += "\n  ERROR! s[] = ["; foreach(double thing in s) txtinp += thing.ToString() + ", "; txtinp += "]\n";
-				}
-				txtout += txtinp; txtinp = ""; inpp = selp = 0; Text = inpp.ToString();
-				//txtout += "\n\nans = " + txtans + "\n\n";
-			} // if(Parse())
+					} // for (int q = 0; q < i.Count; q++)
+						//if(txtans != "") txtinp += "txtans = " + txtans;
+					if(s.Count == 0) { txtinp = ""; } else
+					if(s.Count == 1 || mode["Debug"] == "1") { txtans = s.Pop().ToString(); txtinp = "> " + txtinp + " = " + txtans + "\n"; Clipboard.SetText(txtinp); } else {
+						txtinp = "> ERROR! txtinp = " + txtinp;
+						txtinp += "\n  ERROR! txtans = " + txtans;
+						txtinp += "\n  ERROR! i[] = ["; foreach(string thing in i) txtinp += thing.ToString() + ", "; txtinp += "]";
+						txtinp += "\n  ERROR! s[] = ["; foreach(double thing in s) txtinp += thing.ToString() + ", "; txtinp += "]\n";
+					}
+					txtout += txtinp; txtinp = ""; inpp = selp = 0; Text = inpp.ToString();
+					//txtout += "\n\nans = " + txtans + "\n\n";
+					break;
+				default: break;
+			} // switch(Parse())
 			txttym += "Calc: " + (DateTime.Now - st).TotalMilliseconds + "; ";
 			Draw();
 		} // void Calc()
@@ -389,8 +467,12 @@ namespace Calculator {
 			if(!busy) {
 				txttym += "Draw: " + (DateTime.Now - st).TotalMilliseconds + " ms\n";
 				if(mode["Debug"] == "0") txtsta = txttym; else { txtout += txttym; txtsta = "\n"; }
-				txtsta += "\nMode: " + mode["Mode"].ToString();
-				txtsta += "\nDebug: " + mode["Debug"].ToString();
+				txtsta += mode["Error"].ToString()
+							+ "\nMode: " + mode["Mode"].ToString() 
+							+ "    Entry: " + mode["Entry"].ToString() 
+							+ "    Type: " + mode["Type"].ToString()
+								+ "\nDebug: " + mode["Debug"].ToString()
+					;
 			} // if(!busy)
 
 			//gb.DrawString(txtinp, Font, Brushes.White, recti.Location);
