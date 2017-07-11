@@ -168,11 +168,24 @@ namespace Calculator {
 								selp = inpp = Math.Min(inpp, selp); Chinp();
 							}
 							break;
+						case Keys.Delete:
+							if(selp == inpp) {
+								if(inpp < txtinp.Length) {
+									txtinp = txtinp.Substring(0, inpp) + txtinp.Substring(inpp + 1);
+									Chinp();
+								}
+							} else {
+								txtinp = txtinp.Substring(0, Math.Min(inpp, selp)) + txtinp.Substring(Math.Max(inpp, selp));
+								selp = inpp = Math.Min(inpp, selp); Chinp();
+							}
+							break;
 						case Keys.Space: ins(" "); break;
 						case Keys.Left: selp = inpp = Math.Max(0, Math.Min(inpp, selp) - 1); Chinp(); break;
 						case Keys.Right: selp = inpp = Math.Min(txtinp.Length, Math.Max(inpp, selp) + 1); Chinp(); break;
 						case Keys.Up: if(histp > 0) txtinp = hist[--histp]; selp = inpp = txtinp.Length; Chinp(); break;
 						case Keys.Down: if(histp < hist.Count - 1) txtinp = hist[++histp]; selp = inpp = txtinp.Length; Chinp(); break;
+						case Keys.Home: selp = inpp = 0; Chinp(); break;
+						case Keys.End: selp = inpp = txtinp.Length; Chinp(); break;
 						#endregion Control keys
 
 						#region Number keys (useful for a calculator)
@@ -239,6 +252,8 @@ namespace Calculator {
 						case Keys.Enter: ins("\n"); break;
 						case Keys.Left: selp = Math.Max(0, selp - 1); Chinp(); break;
 						case Keys.Right: selp = Math.Min(txtinp.Length, selp + 1); Chinp(); break;
+						case Keys.Home: selp = 0; Chinp(); break;
+						case Keys.End: selp = txtinp.Length; Chinp(); break;
 						#endregion Control keys
 
 						#region Capital letters
@@ -291,6 +306,7 @@ namespace Calculator {
 						#endregion Control keys
 
 						#region Capital letters
+						case Keys.A: inpp = 0; selp = txtinp.Length; Chinp(); break;
 						case Keys.X:
 							Clipboard.SetText(txtinp.Substring(Math.Min(inpp, selp), Math.Max(inpp, selp) - Math.Min(inpp, selp)));
 							txtinp = txtinp.Substring(0, Math.Min(inpp, selp)) + txtinp.Substring(Math.Max(inpp, selp));
@@ -373,7 +389,7 @@ namespace Calculator {
 								if(op.Count == 0) return ParseErr(st, "Error: Unpaired ) at token " + q.ToString());
 								op.Pop(); break;
 							default:
-								while(op.Count > 0 && OpPrec(op.Peek()) >= OpPrec(a[q]))
+								while(op.Count > 0 && OpPrec(op.Peek()) >= (OpPrec(a[q]) + (a[q]=="^"?1:0)))
 									i.Add(op.Pop()); op.Push(a[q]);
 								break;
 						} // switch(a[q])
