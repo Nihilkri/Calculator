@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using MathNet.Numerics;
 using NihilKri;
 
 namespace Calculator {
@@ -91,6 +92,10 @@ namespace Calculator {
 		/// The list of input commands parsed from txtinp
 		/// </summary>
 		List<string> i = new List<string>();
+		/// <summary>
+		/// The list of variables
+		/// </summary>
+		Dictionary<string, string> vars = new Dictionary<string, string>();
 
 		#endregion Control and Calculation
 		#endregion Variables
@@ -108,18 +113,32 @@ namespace Calculator {
 			// Define the three rectangles
 			// b = border width, w = input/variable width
 			// A border of 5 pixels around and between all four areas. rects taking the full top width, rectv taking the remaining right side, with recti taking the remaining bottom, all of width 60. recto takes the remaining top left area under rects
-			int b = 5, w = 44;
-			int lx = fx - w - 3 * b, ly = fy - w - 2 * b;
+			int b = 5, sh = 44, ih = 13, vw = 176;
+			//int b = 5, sh = 44, ih = 44, vw = 44;
+			//int lx = fx - w - 3 * b, ly = fy - w - 2 * b;
 
 			int sx = b, sy = b;
-			int vx = lx + 2 * b, vy = w + 2 * b;
-			int ix = b, iy = ly + b;
-			int ox = b, oy = w + 2 * b;
+			int vx = fx - vw - 1 * b, vy = sh + 2 * b;
+			int ix = b, iy = fy - ih - b;
+			int ox = b, oy = sh + 2 * b;
 
-			int sw = fx - 2 * b, sh = w;
-			int vw = w, vh = fy - vy - b;
-			int iw = lx, ih = w;
-			int ow = lx, oh = ly - oy;
+			int sw = fx - 2 * b;
+			int vh = fy - vy - b;
+			int iw = fx - vw - 3 * b;
+			int ow = fx - vw - 3 * b, oh = fy - ih - 2 * b - oy;
+			// A border of 5 pixels around and between all four areas. rects taking the full top width, rectv taking the remaining right side, with recti taking the remaining bottom, all of width 60. recto takes the remaining top left area under rects
+			//int b = 5, w = 44;
+			//int lx = fx - w - 3 * b, ly = fy - w - 2 * b;
+
+			//int sx = b, sy = b;
+			//int vx = lx + 2 * b, vy = w + 2 * b;
+			//int ix = b, iy = ly + b;
+			//int ox = b, oy = w + 2 * b;
+
+			//int sw = fx - 2 * b, sh = w;
+			//int vw = w, vh = fy - vy - b;
+			//int iw = lx, ih = w;
+			//int ow = lx, oh = ly - oy;
 			// A border of 5 pixels around and between all three areas, rectv taking the full right side with recti taking the remaining bottom, both of width 60, with recto taking the remaining top left
 			//int b = 5, w = 60, lx = fx - w - 3 * b, ly = fy - w - 3 * b;
 			//int ox = b, oy = b, ix = b, iy = ly + 2 * b, vx = lx + 2 * b, vy = b;
@@ -132,9 +151,10 @@ namespace Calculator {
 			#region Initialization
 			mode.Add("Mode", "Normal");
 			mode.Add("Debug", "0");
+			mode.Add("Error", "Initialization successful");
 			mode.Add("Entry", "RPN");
 			mode.Add("Type", "Double");
-			mode.Add("Error", "Initialization successful");
+			mode.Add("Angle", "Radians");
 
 			#endregion Initialization
 			Draw();
@@ -236,6 +256,7 @@ namespace Calculator {
 						case Keys.Subtract: case Keys.OemMinus: ins("-"); break;
 						case Keys.Multiply: ins("*"); break;
 						case Keys.Divide: case Keys.OemQuestion: ins("/"); break;
+						case Keys.Oemplus: ins("="); break;
 
 						#endregion Mathematical symbols
 
@@ -287,6 +308,7 @@ namespace Calculator {
 
 						#region Mathematical symbols
 						case Keys.Oemplus: ins("+"); break;
+						case Keys.D1: ins("!"); break;
 						case Keys.D6: ins("^"); break;
 						case Keys.D8: ins("*"); break;
 						case Keys.D9: ins("("); break;
@@ -365,8 +387,10 @@ namespace Calculator {
 						case '*': i.Add("*"); break;
 						case '/': i.Add("/"); break;
 						case '^': i.Add("^"); break;
+						case '!': i.Add("!"); break;
 						case '(': i.Add("("); break;
 						case ')': i.Add(")"); break;
+						case '=': if(i[i.Count - 1] == "=") i[i.Count - 1] = "=="; else i.Add("="); break;
 
 						default: i.Add(v.ToString()); break;
 					} // switch(v)
@@ -409,10 +433,13 @@ namespace Calculator {
 			if(reg.Length == 0) return;
 			switch(reg) {
 				case "cls": txtout = ""; break;
+				case "debug": mode["Debug"] = (1 - double.Parse(mode["Debug"])).ToString(); break;
 				case "rpn": mode["Entry"] = "RPN"; break;
 				case "infix": mode["Entry"] = "Infix"; break;
 				case "pn": mode["Entry"] = "PN"; break;
-				case "debug": mode["Debug"] = (1 - double.Parse(mode["Debug"])).ToString(); break;
+				case "rad": mode["Angle"] = "Radians"; break;
+				case "deg": mode["Angle"] = "Degrees"; break;
+				case "grad": mode["Angle"] = "Gradians"; break;
 				default: if(rw) i.Add(reg); break;
 			}
 
@@ -426,14 +453,17 @@ namespace Calculator {
 				case "ans": return -1;
 				case "pi": return -1;
 				case "e": return -1;
-				case "+": return 1;
-				case "*": return 2;
-				case "^": return 3;
-				case "-": return 4;
-				case "/": return 5;
-				case "ln": return 6;
-				case "sin": return 6;
-				case "cos": return 6;
+				case "=": return 2;
+				case "==":return 10;
+				case "+": return 11;
+				case "*": return 12;
+				case "^": return 13;
+				case "!": return 14;
+				case "-": return 14;
+				case "/": return 14;
+				case "ln": return 15;
+				case "sin": return 15;
+				case "cos": return 15;
 
 				default: return 0;
 			} // switch(op)
@@ -460,26 +490,40 @@ namespace Calculator {
 								case "pi": s.Push(Math.PI); break;
 								case "e": s.Push(Math.E); break;
 
-								// Operators
+								// Binary Operators
 								case "+":
 									if(s.Count > 1) tmp = s.Pop() + s.Pop();
 									else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp += s.Pop();
-									s.Push(tmp); break;
-								case "-":
-									if(s.Count > 0) tmp = -s.Pop();
-									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = -tmp;
 									s.Push(tmp); break;
 								case "*":
 									if(s.Count > 1) tmp = s.Pop() * s.Pop();
 									else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp *= s.Pop();
 									s.Push(tmp); break;
+								case "^":
+									if(s.Count > 1) { tmp = s.Pop(); tmp = Math.Pow(s.Pop(), tmp); }
+									else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp = Math.Pow(tmp, s.Pop());
+									s.Push(tmp); break;
+								case "==":
+									if(s.Count > 1) { tmp = s.Pop(); tmp = (s.Pop() == tmp) ? 1.0 : 0.0; }
+									else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp = (s.Pop() == tmp) ? 1.0 : 0.0;
+									s.Push(tmp); break;
+								case "=":
+									if(s.Count > 1) { tmp = s.Pop(); tmp = (s.Pop() == tmp) ? 1.0 : 0.0; }
+									else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp = (s.Pop() == tmp) ? 1.0 : 0.0;
+									s.Push(tmp); break;
+
+								// Unary Operators
+								case "-":
+									if(s.Count > 0) tmp = -s.Pop();
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = -tmp;
+									s.Push(tmp); break;
 								case "/":
 									if(s.Count > 0) tmp = 1.0 / s.Pop();
 									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = 1.0 / tmp;
 									s.Push(tmp); break;
-								case "^":
-									if(s.Count > 0) tmp = s.Pop(); // Math.Pow(, s.Pop());
-									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) ; tmp = Math.Pow(s.Pop(), tmp);
+								case "!":
+									if(s.Count > 0) tmp = SpecialFunctions.Gamma(s.Pop() + 1.0);
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = SpecialFunctions.Gamma(tmp + 1.0);
 									s.Push(tmp); break;
 
 								// Functions
@@ -488,12 +532,12 @@ namespace Calculator {
 									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Log(tmp);
 									s.Push(tmp); break;
 								case "sin":
-									if(s.Count > 0) tmp = Math.Sin(s.Pop());
-									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Sin(tmp);
+									if(s.Count > 0) tmp = Math.Sin(s.Pop() * AngleConverter());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Sin(tmp * AngleConverter());
 									s.Push(tmp); break;
 								case "cos":
-									if(s.Count > 0) tmp = Math.Cos(s.Pop());
-									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Cos(tmp);
+									if(s.Count > 0) tmp = Math.Cos(s.Pop() * AngleConverter());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Cos(tmp * AngleConverter());
 									s.Push(tmp); break;
 
 								case "pfact":
@@ -502,6 +546,9 @@ namespace Calculator {
 									//s.Push(tmp);
 									break;
 
+								default:
+									mode["Error"] = "Invalid Token " + i[q] + " at i[" + q.ToString() + "]";
+									break;
 							} // switch (i[q])
 
 
@@ -511,11 +558,15 @@ namespace Calculator {
 						//if(txtans != "") txtinp += "txtans = " + txtans;
 					hist.Add(txtinp); histp = hist.Count;
 					if(s.Count == 0) { txtinp = ""; } else
-					if(s.Count == 1 || mode["Debug"] == "1") { txtans = s.Pop().ToString(); txtinp = "> " + txtinp + " = " + txtans + "\n"; Clipboard.SetText(txtinp); } else {
-						txtinp = "> ERROR! txtinp = " + txtinp;
-						txtinp += "\n  ERROR! txtans = " + txtans;
-						txtinp += "\n  ERROR! i[] = ["; foreach(string thing in i) txtinp += thing.ToString() + ", "; txtinp += "]";
-						txtinp += "\n  ERROR! s[] = ["; foreach(double thing in s) txtinp += thing.ToString() + ", "; txtinp += "]\n";
+					if(s.Count == 1 && mode["Debug"] == "0" && mode["Error"] == "Parse successful") { txtans = s.Pop().ToString(); txtinp = "> " + txtinp + " = " + txtans + "\n"; Clipboard.SetText(txtinp); } else {
+						if(s.Count > 1) mode["Error"] = "Stack has multiple tokens remaining, are you missing operators?";
+						string err = (mode["Error"] != "Parse successful" ? "ERROR" : "DEBUG");
+						txtinp = "> " + err + "! txtinp = " + txtinp;
+						txtinp += "\n  " + err + "! txtans = " + txtans;
+						txtinp += "\n  " + err + "! i[] = ["; foreach(string thing in i) txtinp += thing.ToString() + ", "; txtinp += "]";
+						txtinp += "\n  " + err + "! s[] = ["; foreach(double thing in s) txtinp += thing.ToString() + ", "; txtinp += "]";
+						if(err == "ERROR") txtinp += "\n  " + err + "! Error = " + mode["Error"];
+						txtinp += "\n";
 					}
 					txtout += txtinp; txtinp = ""; inpp = selp = 0; Text = inpp.ToString();
 					//txtout += "\n\nans = " + txtans + "\n\n";
@@ -525,6 +576,10 @@ namespace Calculator {
 			txttym += "Calc: " + (DateTime.Now - st).TotalMilliseconds + "; ";
 			Draw();
 		} // void Calc()
+		public double AngleConverter() {
+			return (mode["Angle"] == "Radians" ? 1.0 : (Math.PI / (mode["Angle"] == "Gradians" ? 200.0 : 180.0)));
+
+		}
 		public void Chinp() {
 			gb.FillRectangle(Brushes.DarkBlue, recti); // txtinp
 			gb.DrawRectangle(Pens.LightBlue, recti); // txtinp
@@ -537,8 +592,8 @@ namespace Calculator {
 				float lp = recti.X + l * 6.9f, rp = recti.X + r * 6.9f;
 				gb.FillRectangle(Brushes.LightBlue, lp, recti.Y, rp - lp, 11);
 				gb.DrawString(txtinp.Substring(0, l), Font, Brushes.White, recti.X, recti.Y);
-				gb.DrawString(txtinp.Substring(l, r - l), Font, Brushes.White, lp, recti.Y + 11);
-				gb.DrawString(txtinp.Substring(r), Font, Brushes.White, rp, recti.Y + 22);
+				gb.DrawString(txtinp.Substring(l, r - l), Font, Brushes.Black, lp, recti.Y);
+				gb.DrawString(txtinp.Substring(r), Font, Brushes.White, rp, recti.Y);
 				gb.DrawLine(Pens.White, recti.X + inpp * 6.9f, recti.Y + 11, recti.X + (inpp + 1) * 6.9f, recti.Y + 11);
 				Text = "inpp = " + inpp.ToString() + "    selp = " + selp.ToString();
 			}
@@ -559,7 +614,8 @@ namespace Calculator {
 				if(mode["Debug"] == "0") txtsta = txttym; else { txtout += txttym; txtsta = "\n"; }
 				txtsta += mode["Error"].ToString()
 							+ "\nMode: " + mode["Mode"].ToString() 
-							+ "    Entry: " + mode["Entry"].ToString() 
+							+ "    Entry: " + mode["Entry"].ToString()
+							+ "    Angle: " + mode["Angle"].ToString()
 							+ "    Type: " + mode["Type"].ToString()
 								+ "\nDebug: " + mode["Debug"].ToString()
 					;
