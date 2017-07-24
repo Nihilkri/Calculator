@@ -7,7 +7,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Numerics;
 using MathNet.Numerics;
+using MathNet.Numerics.LinearAlgebra;
 using NihilKri;
 
 namespace Calculator {
@@ -202,8 +204,8 @@ namespace Calculator {
 						case Keys.Space: ins(" "); break;
 						case Keys.Left: selp = inpp = Math.Max(0, Math.Min(inpp, selp) - 1); Chinp(); break;
 						case Keys.Right: selp = inpp = Math.Min(txtinp.Length, Math.Max(inpp, selp) + 1); Chinp(); break;
-						case Keys.Up: if(histp > 0) txtinp = hist[--histp]; selp = inpp = txtinp.Length; Chinp(); break;
-						case Keys.Down: if(histp < hist.Count - 1) txtinp = hist[++histp]; selp = inpp = txtinp.Length; Chinp(); break;
+						case Keys.Up: if(histp > 0) txtinp = hist[--histp]; selp = inpp = txtinp.Length; Chinp(); Text += "    histp = " + histp.ToString(); break;
+						case Keys.Down: if(histp < hist.Count - 1) txtinp = hist[++histp]; selp = inpp = txtinp.Length; Chinp(); Text += "    histp = " + histp.ToString(); break;
 						case Keys.Home: selp = inpp = 0; Chinp(); break;
 						case Keys.End: selp = inpp = txtinp.Length; Chinp(); break;
 						#endregion Control keys
@@ -375,6 +377,7 @@ namespace Calculator {
 			i.Clear(); //txtans = "";
 			char v; string reg = "";
 			Stack<String> nm = new Stack<string>(), op = new Stack<string>();
+			mode["Type"] = "Double";
 			for(int q = 0; q < txtinp.Length; q++) {
 				v = txtinp[q];
 				if(char.IsLetterOrDigit(v) || (v == '.' && reg.Length > 0 && !reg.Contains("."))) { reg += v; } else {
@@ -453,6 +456,8 @@ namespace Calculator {
 				case "ans": return -1;
 				case "pi": return -1;
 				case "e": return -1;
+				case "c": return -1;
+				case "phi": return -1;
 				case "=": return 2;
 				case "==":return 10;
 				case "+": return 11;
@@ -463,7 +468,10 @@ namespace Calculator {
 				case "/": return 14;
 				case "ln": return 15;
 				case "sin": return 15;
+				case "asin": return 15;
 				case "cos": return 15;
+				case "acos": return 15;
+				case "fib": return 15;
 
 				default: return 0;
 			} // switch(op)
@@ -471,12 +479,23 @@ namespace Calculator {
 		public void Calc() {
 			mode["Error"] = Parse();
 			DateTime st = DateTime.Now;
+			switch(mode["Type"]) {
+				case "Double": CalcR(); break;
+				case "Complex Matrix": CalcCM(); break;
+				default: mode["Error"] = "Invalid Data Type!"; break;
+			}
+
+			txttym += "Calc: " + (DateTime.Now - st).TotalMilliseconds + "; ";
+			Draw();
+		} // void Calc()
+		public void CalcR() {
 			Type T = typeof(double);
 			switch(mode["Error"]) {
 				case "Parse successful":
-					//st = DateTime.Now; //txtans = "";
-					double tmp = 0.0; Stack<double> s = new Stack<double>();
+					double tmp = 0.0;
+					Stack<double> s = new Stack<double>();
 					for(int q = 0; q < i.Count; q++) {
+						tmp = 0.0;
 						if(double.TryParse(i[q], out tmp)) {
 							s.Push(tmp);
 
@@ -484,11 +503,15 @@ namespace Calculator {
 							switch(i[q]) {
 								// Control
 								case "TEST": KNTest(); break;
+								case "QTEST": QTest(); break;
+								case "PFLIST": PFList(); break;
 
 								// Constants
 								case "ans": if(double.TryParse(txtans, out tmp)) s.Push(tmp); break;
 								case "pi": s.Push(Math.PI); break;
 								case "e": s.Push(Math.E); break;
+								case "c": s.Push(299792458.0); break;
+								case "phi": s.Push((1.0 + Math.Sqrt(5)) / 2.0); break;
 
 								// Binary Operators
 								case "+":
@@ -535,10 +558,26 @@ namespace Calculator {
 									if(s.Count > 0) tmp = Math.Sin(s.Pop() * AngleConverter());
 									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Sin(tmp * AngleConverter());
 									s.Push(tmp); break;
+								case "asin":
+									if(s.Count > 0) tmp = Math.Asin(s.Pop() * AngleConverter());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Asin(tmp * AngleConverter());
+									s.Push(tmp); break;
 								case "cos":
 									if(s.Count > 0) tmp = Math.Cos(s.Pop() * AngleConverter());
 									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Cos(tmp * AngleConverter());
 									s.Push(tmp); break;
+								case "acos":
+									if(s.Count > 0) tmp = Math.Acos(s.Pop() * AngleConverter());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Acos(tmp * AngleConverter());
+									s.Push(tmp); break;
+								case "fib":
+									double phi = (1.0 + Math.Sqrt(5)) / 2.0;
+									if(s.Count > 0) tmp = s.Pop();
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) ;
+									else tmp = 0;
+									tmp = (Math.Pow(phi, tmp) - Math.Pow(-phi, -tmp)) / Math.Sqrt(5.0);
+									s.Push(tmp); break;
+
 
 								case "pfact":
 									if(s.Count > 0) tmp = s.Pop(); // Math.Pow(, s.Pop());
@@ -565,7 +604,7 @@ namespace Calculator {
 						txtinp += "\n  " + err + "! txtans = " + txtans;
 						txtinp += "\n  " + err + "! i[] = ["; foreach(string thing in i) txtinp += thing.ToString() + ", "; txtinp += "]";
 						txtinp += "\n  " + err + "! s[] = ["; foreach(double thing in s) txtinp += thing.ToString() + ", "; txtinp += "]";
-						if(err == "ERROR") txtinp += "\n  " + err + "! Error = " + mode["Error"];
+						if(err == "ERROR") txtinp += "\n  ERROR! " + mode["Error"];
 						txtinp += "\n";
 					}
 					txtout += txtinp; txtinp = ""; inpp = selp = 0; Text = inpp.ToString();
@@ -573,28 +612,149 @@ namespace Calculator {
 					break;
 				default: break;
 			} // switch(Parse())
-			txttym += "Calc: " + (DateTime.Now - st).TotalMilliseconds + "; ";
-			Draw();
-		} // void Calc()
+		} // void CalcR()
+		public void CalcCM() {
+			Type T = typeof(System.Numerics.Complex);
+			switch(mode["Error"]) {
+				case "Parse successful":
+					//st = DateTime.Now; //txtans = "";
+					double tmpd = 0.0;
+					Matrix<Complex> tmp = CreateMatrix.Dense<Complex>(1, 1);
+					Stack<Matrix<Complex>> s = new Stack<Matrix<Complex>>();
+					for(int q = 0; q < i.Count; q++) {
+						tmpd = 0.0; tmp[0, 0] = 0.0;
+						if(double.TryParse(i[q], out tmpd)) {
+							s.Push(CreateMatrix.Dense<Complex>(1, 1, tmpd));
+
+						} else {
+							switch(i[q]) {
+								// Control
+								case "TEST": KNTest(); break;
+
+								// Constants
+								case "ans": if(double.TryParse(txtans, out tmpd)) s.Push(CreateMatrix.Dense<Complex>(1, 1, tmpd)); break;
+								case "pi": tmp[0, 0] = Math.PI; s.Push(tmp); break;
+								case "e": tmp[0, 0] = Math.E; s.Push(tmp); break;
+								case "c": tmp[0, 0] = 299792458.0; s.Push(tmp); break;
+								case "phi": tmp[0, 0] = (1.0 + Math.Sqrt(5)) / 2.0; s.Push(tmp); break;
+
+								// Binary Operators
+								case "+":
+									if(s.Count > 1) tmp = s.Pop() + s.Pop();
+									//else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp += s.Pop();
+									s.Push(tmp); break;
+								case "*":
+									if(s.Count > 1) tmp = s.Pop() * s.Pop();
+									//else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp *= s.Pop();
+									s.Push(tmp); break;  /*
+								case "^":
+									if(s.Count > 1) { tmp = s.Pop(); for(int x = 0; x < tmp.ColumnCount; x++) for(int y = 0; y < tmp.RowCount; y++) tmp = Math.Pow(s.Pop(), tmp); } else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp = Math.Pow(tmp, s.Pop());
+									s.Push(tmp); break;
+								case "==":
+									if(s.Count > 1) { tmp = s.Pop(); tmp = (s.Pop() == tmp) ? 1.0 : 0.0; } else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp = (s.Pop() == tmp) ? 1.0 : 0.0;
+									s.Push(tmp); break;
+								case "=":
+									if(s.Count > 1) { tmp = s.Pop(); tmp = (s.Pop() == tmp) ? 1.0 : 0.0; } else if(s.Count == 1 && double.TryParse(txtans, out tmp)) tmp = (s.Pop() == tmp) ? 1.0 : 0.0;
+									s.Push(tmp); break;
+
+								// Unary Operators
+								case "-":
+									if(s.Count > 0) tmp = -s.Pop();
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = -tmp;
+									s.Push(tmp); break;
+								case "/":
+									if(s.Count > 0) tmp = 1.0 / s.Pop();
+								case "!":
+									if(s.Count > 0)									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = 1.0 / tmp;
+									s.Push(tmp); break;
+ tmp = SpecialFunctions.Gamma(s.Pop() + 1.0);
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) tmp = SpecialFunctions.Gamma(tmp + 1.0);
+									s.Push(tmp); break;
+
+								// Functions
+								case "ln":
+									if(s.Count > 0) tmp = Math.Log(s.Pop());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Log(tmp);
+									s.Push(tmp); break;
+								case "sin":
+									if(s.Count > 0) tmp = Math.Sin(s.Pop() * AngleConverter());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Sin(tmp * AngleConverter());
+									s.Push(tmp); break;
+								case "asin":
+									if(s.Count > 0) tmp = Math.Asin(s.Pop() * AngleConverter());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Asin(tmp * AngleConverter());
+									s.Push(tmp); break;
+								case "cos":
+									if(s.Count > 0) tmp = Math.Cos(s.Pop() * AngleConverter());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Cos(tmp * AngleConverter());
+									s.Push(tmp); break;
+								case "acos":
+									if(s.Count > 0) tmp = Math.Acos(s.Pop() * AngleConverter());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) Math.Acos(tmp * AngleConverter());
+									s.Push(tmp); break;
+								case "fib":
+									double phi = (1.0 + Math.Sqrt(5)) / 2.0;
+									if(s.Count > 0) tmp = s.Pop();
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) ;
+									else tmp = 0;
+									tmp = (Math.Pow(phi, tmp) - Math.Pow(-phi, -tmp)) / Math.Sqrt(5.0);
+									s.Push(tmp); break;
+
+
+								case "pfact":
+									if(s.Count > 0) tmp = s.Pop(); // Math.Pow(, s.Pop());
+									else if(s.Count == 0 && double.TryParse(txtans, out tmp)) ; foreach(int pf in KN.listpfact((int)tmp)) s.Push(pf);
+									//s.Push(tmp);
+									break; */
+
+								default:
+									mode["Error"] = "Invalid Token " + i[q] + " at i[" + q.ToString() + "]";
+									break;
+							} // switch (i[q])
+
+
+						} // if(!double.TryParse(i[q], out tmp))
+
+					} // for (int q = 0; q < i.Count; q++)
+						//if(txtans != "") txtinp += "txtans = " + txtans;
+					hist.Add(txtinp); histp = hist.Count;
+					if(s.Count == 0) { txtinp = ""; } else
+					if(s.Count == 1 && mode["Debug"] == "0" && mode["Error"] == "Parse successful") { txtans = s.Pop().ToString(); txtinp = "> " + txtinp + " = " + txtans + "\n"; Clipboard.SetText(txtinp); } else {
+						if(s.Count > 1) mode["Error"] = "Stack has multiple tokens remaining, are you missing operators?";
+						string err = (mode["Error"] != "Parse successful" ? "ERROR" : "DEBUG");
+						txtinp = "> " + err + "! txtinp = " + txtinp;
+						txtinp += "\n  " + err + "! txtans = " + txtans;
+						txtinp += "\n  " + err + "! i[] = ["; foreach(string thing in i) txtinp += thing.ToString() + ", "; txtinp += "]";
+						//txtinp += "\n  " + err + "! s[] = ["; foreach(double thing in s) txtinp += thing.ToString() + ", "; txtinp += "]";
+						if(err == "ERROR") txtinp += "\n  ERROR! " + mode["Error"];
+						txtinp += "\n";
+					}
+					txtout += txtinp; txtinp = ""; inpp = selp = 0; Text = inpp.ToString();
+					//txtout += "\n\nans = " + txtans + "\n\n";
+					break;
+				default: break;
+			} // switch(Parse())
+		} // void CalcCM()
 		public double AngleConverter() {
 			return (mode["Angle"] == "Radians" ? 1.0 : (Math.PI / (mode["Angle"] == "Gradians" ? 200.0 : 180.0)));
 
 		}
 		public void Chinp() {
+			float x = 6.82f, y = 11.0f;
 			gb.FillRectangle(Brushes.DarkBlue, recti); // txtinp
 			gb.DrawRectangle(Pens.LightBlue, recti); // txtinp
 			if(inpp == selp) {
 				gb.DrawString(txtinp, Font, Brushes.White, recti.Location);
-				gb.DrawLine(Pens.White, recti.X + inpp * 6.9f, recti.Y + 11, recti.X + (inpp + 1) * 6.9f, recti.Y + 11);
+				gb.DrawLine(Pens.White, recti.X + inpp * x, recti.Y + y, recti.X + (inpp + 1) * x, recti.Y + y);
 				Text = "inpp = " + inpp.ToString();
 			} else {
 				int l = Math.Min(inpp, selp), r = Math.Max(inpp, selp);
-				float lp = recti.X + l * 6.9f, rp = recti.X + r * 6.9f;
-				gb.FillRectangle(Brushes.LightBlue, lp, recti.Y, rp - lp, 11);
+				float lp = recti.X + l * x, rp = recti.X + r * x;
+				gb.FillRectangle(Brushes.LightBlue, lp, recti.Y, rp - lp, y);
 				gb.DrawString(txtinp.Substring(0, l), Font, Brushes.White, recti.X, recti.Y);
 				gb.DrawString(txtinp.Substring(l, r - l), Font, Brushes.Black, lp, recti.Y);
 				gb.DrawString(txtinp.Substring(r), Font, Brushes.White, rp, recti.Y);
-				gb.DrawLine(Pens.White, recti.X + inpp * 6.9f, recti.Y + 11, recti.X + (inpp + 1) * 6.9f, recti.Y + 11);
+				gb.DrawLine(Pens.White, recti.X + inpp * 6.9f, recti.Y + y, recti.X + (inpp + 1) * x, recti.Y + y);
 				Text = "inpp = " + inpp.ToString() + "    selp = " + selp.ToString();
 			}
 			gf.DrawImage(gi, 0, 0);
@@ -638,11 +798,13 @@ namespace Calculator {
 			short sa = 64, sb = 64, sc = 0;
 			long la = a, lb = b, lc = c;
 			double da = a / 3.0, db = b / 3.0, dc = c;
-			i256 ia = a, ib = b, ic = c;
+			KNi256 ia = a, ib = b, ic = c;
 			byte[] byt = new byte[32]; byt[31] = 15;
 			System.Numerics.BigInteger Ia = new System.Numerics.BigInteger(byt), Ib = new System.Numerics.BigInteger(byt), Ic = new System.Numerics.BigInteger(byt);
 			System.Numerics.Complex ca = a, cb = b, cc = c;
-			Complex ka = a, kb = b, kc = c;
+			KNComplex ka = a, kb = b, kc = c;
+			KNComplexS ksa = a, ksb = b, ksc = c;
+			KNQuaternion qa = a, qb = b, qc = c;
 			DateTime st;
 
 			txtout += "\nKNTest:"; Draw(true);
@@ -668,6 +830,12 @@ namespace Calculator {
 			st = DateTime.Now; txtout += "\nKabi+Kabi: "; Draw(true);
 			for(int q = 0; q < 100000000; q++) { kc = ka + kb; }
 			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; txtout += "\nKSabi+KSabi: "; Draw(true);
+			for(int q = 0; q < 100000000; q++) { ksc = ksa + ksb; }
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; txtout += "\nKijk+Kijk: "; Draw(true);
+			for(int q = 0; q < 100000000; q++) { qc = qa + qb; }
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
 
 			l++;
 
@@ -692,11 +860,29 @@ namespace Calculator {
 			}
 			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
 			st = DateTime.Now; txtout += "\nK1024: "; Draw(true);
-			//kc = new Complex(0, 0);
+			//kc = new KNComplex(0, 0);
 			for(int y = 0; y < 1024; y++) {
 				for(int x = 0; x < 1024; x++) {
-					//kb = new Complex(-x, -y) + kc;
-					ka = (new Complex(x, y)).t; c = ka.c;
+					//kb = new KNComplex(-x, -y) + kc;
+					ka = (new KNComplex(x, y)).t; c = ka.c;
+				}
+			}
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; txtout += "\nKS1024: "; Draw(true);
+			//ksc = new KNComplex(0, 0);
+			for(int y = 0; y < 1024; y++) {
+				for(int x = 0; x < 1024; x++) {
+					//ksb = new KNComplex(-x, -y) + kc;
+					ksa = (new KNComplexS(x, y)).t; c = ksa.c;
+				}
+			}
+			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
+			st = DateTime.Now; txtout += "\nQ1024: "; Draw(true);
+			//kc = new KNComplex(0, 0);
+			for(int y = 0; y < 1024; y++) {
+				for(int x = 0; x < 1024; x++) {
+					//qb = new KNQuaternion(-x, -y) + qc;
+					qa = (new KNQuaternion(x, y, x, y)).t; dc = qa.c;
 				}
 			}
 			txtout += (DateTime.Now - st).TotalMilliseconds + " ms";
@@ -705,7 +891,7 @@ namespace Calculator {
 			//gb.DrawString(ib.ToString() + "\n" + ib.ToString(true), Font, Brushes.White, 300, 20);
 			//gb.DrawString(((int)(ia + ib+7000)).ToString() + "\n" + (ia + ib+7000).ToString() + "\n" + (ia + ib).ToString(true), Font, Brushes.White, 200, 230);
 
-
+			txtout += "\n";
 		} // void KNTest()
 		double tau = 2 * Math.PI;
 		public int c(System.Numerics.Complex n) {
@@ -740,6 +926,66 @@ namespace Calculator {
 				(int)Math.Floor((cb + m) * 255.0);
 
 		} // int c(System.Numerics.Complex n)
+
+		public void QTest() {
+			DateTime st;
+			double a = 2.0, b = 3.0, c = 5.0, d = 7.0;
+			double e = 11.0, f = 13.0, g = 17.0, h = 19.0;
+			double i = 23.0, j = 29.0, k = 31.0, l = 37.0;
+			KNQuaternion q = new KNQuaternion(0.0, 0.0, 0.0, 0.0);
+			KNQuaternion qa = new KNQuaternion(a, b, c, d);
+			KNQuaternion qb = new KNQuaternion(e, f, g, h);
+			KNQuaternion qc = new KNQuaternion(i, j, k, l);
+
+			txtout += "\nQTest:"; Draw(true);
+			q = qa * (qb * qc);
+			txtout += "\nA(BC) = " + qa.ToAbi() + " * (" + qb.ToAbi() + " * " + qc.ToAbi() + ") = " + q.ToAbi();
+			q = (qa * qb) * qc;
+			txtout += "\n(AB)C = (" + qa.ToAbi() + " * " + qb.ToAbi() + ") * " + qc.ToAbi() + " = " + q.ToAbi();
+			q = qb * (qc * qa);
+			txtout += "\nB(CA) = " + qb.ToAbi() + " * (" + qc.ToAbi() + " * " + qa.ToAbi() + ") = " + q.ToAbi();
+			q = (qb * qc) * qa;
+			txtout += "\n(BC)A = (" + qb.ToAbi() + " * " + qc.ToAbi() + ") * " + qa.ToAbi() + " = " + q.ToAbi();
+			q = (qc * qa) * qb;
+			txtout += "\n(CA)B = (" + qc.ToAbi() + " * " + qa.ToAbi() + ") * " + qb.ToAbi() + " = " + q.ToAbi();
+			q = qc * (qa * qb);
+			txtout += "\nC(AB) = " + qc.ToAbi() + " * (" + qa.ToAbi() + " * " + qb.ToAbi() + ") = " + q.ToAbi();
+
+			q = qa * (qc * qb);
+			txtout += "\nA(CB) = " + qa.ToAbi() + " * (" + qc.ToAbi() + " * " + qb.ToAbi() + ") = " + q.ToAbi();
+			q = (qa * qc) * qb;
+			txtout += "\n(AC)B = (" + qa.ToAbi() + " * " + qc.ToAbi() + ") * " + qb.ToAbi() + " = " + q.ToAbi();
+			q = (qb * qa) * qc;
+			txtout += "\n(BA)C = (" + qb.ToAbi() + " * " + qa.ToAbi() + ") * " + qc.ToAbi() + " = " + q.ToAbi();
+			q = qb * (qa * qc);
+			txtout += "\nB(AC) = " + qb.ToAbi() + " * (" + qa.ToAbi() + " * " + qc.ToAbi() + ") = " + q.ToAbi();
+			q = qc * (qb * qa);
+			txtout += "\nC(BA) = " + qc.ToAbi() + " * (" + qb.ToAbi() + " * " + qa.ToAbi() + ") = " + q.ToAbi();
+			q = (qc * qb) * qa;
+			txtout += "\n(CB)A = (" + qc.ToAbi() + " * " + qb.ToAbi() + ") * " + qa.ToAbi() + " = " + q.ToAbi();
+
+			q = (qa * qb);
+			txtout += "\n(AB) = (" + qa.ToAbi() + " * " + qb.ToAbi() + ") = " + q.ToAbi();
+			txtout += "\n(AB) = " + q.ToString();
+			q = (qb * qa);
+			txtout += "\n(BA) = (" + qb.ToAbi() + " * " + qa.ToAbi() + ") = " + q.ToAbi();
+			txtout += "\n(BA) = " + q.ToString();
+
+
+		} // void QTest()
+
+		public void PFList() {
+			txtout += "\nQTest:"; Draw(true);
+			string p = ""; int tmp;
+			for(int q = 0; q<70; q++) {
+				p = KN.pfact(q);
+				txtout += "\n" + q.ToString() + " = " + p;
+				if(int.TryParse(p, out tmp) && tmp == q) txtout += "    PRIME";
+
+			}
+
+		} // void PFList()
+
 		#endregion Testing
 
 	} // class Form1
